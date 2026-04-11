@@ -1,6 +1,7 @@
 # IDE files
 .idea/
 .vscode/
+.venv/
 
 # Python files
 __pycache__/
