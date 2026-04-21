@@ -34,6 +34,7 @@ function getUserDashboardData(user) {
   const personalTasks = tasks.filter((task) => task.isPersonal);
   const groupTasks = tasks.filter((task) => !task.isPersonal);
   const logs = getProgressLogs();
+  const now = new Date();
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
 
@@ -54,9 +55,27 @@ function getUserDashboardData(user) {
   const pastOverview = summarizeTasks(pastTasksWithStatus);
 
   const upcomingTasks = tasks
-    .filter((task) => task.deadline)
+    .filter((task) => task.deadline && task.status !== "Completed")
     .sort((left, right) => new Date(left.deadline) - new Date(right.deadline))
     .slice(0, 5);
+
+  const overdueCount = tasks.filter((task) => {
+    if (!task.deadline || task.status === "Completed") {
+      return false;
+    }
+
+    return new Date(task.deadline) < now;
+  }).length;
+
+  const dueSoonCount = tasks.filter((task) => {
+    if (!task.deadline || task.status === "Completed") {
+      return false;
+    }
+
+    const deadline = new Date(task.deadline);
+    const hoursUntilDue = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60);
+    return hoursUntilDue >= 0 && hoursUntilDue <= 72;
+  }).length;
 
   const pastAssignedCount = pastTasksWithStatus.filter(
     (t) => !t.isPersonal && t.assignedTo === user.id && t.status !== "Completed"
@@ -83,6 +102,8 @@ function getUserDashboardData(user) {
     });
   }
 
+  const completedThisWeek = weeklyActivity.reduce((total, day) => total + day.count, 0);
+
   const typeBreakdown = {
     deadlines: tasks.filter((t) => t.taskType === "deadline").length,
     reminders: tasks.filter((t) => t.taskType === "reminder").length,
@@ -93,7 +114,11 @@ function getUserDashboardData(user) {
     groupCount: groups.length,
     personalCount: personalTasks.length,
     assignedCount: currentAssignedCount,
+    allTasks: tasks,
     upcomingTasks,
+    overdueCount,
+    dueSoonCount,
+    completedThisWeek,
     groups,
     trends: {
       taskDiff: currentOverview.total - pastOverview.total,

@@ -1,56 +1,1080 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard | Student Group Project Manager</title>
-    <link rel="stylesheet" href="assets/css/styles.css" />
-  </head>
-  <body>
-    <header id="site-header"></header>
-    <div class="layout-app">
-      <aside id="site-sidebar"></aside>
-      <main class="page">
-        <section class="hero dashboard-hero">
-          <div class="dashboard-hero__grid">
-            <div>
-              <div class="hero__eyebrow">Dashboard</div>
-              <h1 id="dashboard-title">Project overview</h1>
-              <p id="dashboard-copy">Track group momentum, personal work, and the next upcoming deadlines from one place.</p>
-              <div id="dashboard-hero-stats" class="hero__stats" style="margin-top: 1.5rem;"></div>
-            </div>
-            <div id="dashboard-focus-card" class="dashboard-focus-card"></div>
-          </div>
-        </section>
-        <div id="flash-container" class="flash-stack"></div>
-        <section id="dashboard-quick-actions" class="dashboard-action-grid"></section>
-        <section id="dashboard-metrics" class="stats-grid"></section>
-        <div class="two-column" style="margin-bottom: 1.5rem;">
-          <section id="dashboard-overview-chart" class="panel dashboard-panel-tight" style="margin-bottom: 0;"></section>
-          <section id="dashboard-insights" class="panel dashboard-panel-tight" style="margin-bottom: 0;"></section>
-        </div>
-        <div class="two-column" style="margin-bottom: 1.5rem;">
-          <section id="dashboard-weekly-chart" class="panel dashboard-panel-tight" style="margin-bottom: 0;"></section>
-          <section id="dashboard-type-chart" class="panel dashboard-panel-tight" style="margin-bottom: 0;"></section>
-        </div>
-        <section class="two-column">
-          <div class="panel">
-            <div class="split">
-              <h2>Upcoming tasks</h2>
-              <a class="btn-ghost" href="tasks.html">Manage tasks</a>
-            </div>
-            <div id="upcoming-tasks" class="list" style="margin-top: 1rem;"></div>
-          </div>
-          <div class="panel">
-            <div class="split">
-              <h2>Group progress</h2>
-              <a class="btn-ghost" href="groups.html">Open groups</a>
-            </div>
-            <div id="group-progress" class="list" style="margin-top: 1rem;"></div>
-          </div>
-        </section>
-      </main>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Taskly</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    :root {
+      --ink: #0d0d0d;
+      --paper: #f5f2ec;
+      --cream: #ede9e0;
+      --surface: #ffffff;
+      --accent: #c8502a;
+      --accent-light: #e8724f;
+      --accent-glow: rgba(200,80,42,0.12);
+      --gold: #c9a84c;
+      --gold-light: #f0dfa0;
+      --blue: #2563ba;
+      --blue-light: #dbeafe;
+      --green: #1a7a4a;
+      --green-light: #dcfce7;
+      --muted: #7a7468;
+      --muted-2: #a09890;
+      --border: rgba(13,13,13,0.08);
+      --border-strong: rgba(13,13,13,0.14);
+      --sidebar-w: 240px;
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-body: 'DM Sans', sans-serif;
+      --radius: 14px;
+      --radius-sm: 9px;
+      --trans: 0.2s cubic-bezier(0.4,0,0.2,1);
+      --shadow-sm: 0 1px 4px rgba(13,13,13,0.06);
+      --shadow-md: 0 4px 18px rgba(13,13,13,0.08);
+      --shadow-lg: 0 12px 40px rgba(13,13,13,0.1);
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      cursor: none;
+    }
+
+    /* ── CURSOR ── */
+    .cursor {
+      position: fixed; top:0; left:0; width:10px; height:10px;
+      background: var(--accent); border-radius:50%;
+      pointer-events:none; z-index:9999;
+      transform:translate(-50%,-50%);
+      transition: width .22s, height .22s;
+    }
+    .cursor-ring {
+      position:fixed; top:0; left:0; width:30px; height:30px;
+      border:1.5px solid var(--accent); border-radius:50%;
+      pointer-events:none; z-index:9998;
+      transform:translate(-50%,-50%); opacity:.4;
+    }
+
+    /* Noise overlay */
+    body::before {
+      content:''; position:fixed; inset:0;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events:none; z-index:9000; opacity:.3;
+    }
+
+    /* ── LAYOUT ── */
+    .layout-app {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      position: fixed; top:0; left:0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--ink);
+      display: flex; flex-direction: column;
+      padding: 1.5rem 1rem;
+      z-index: 100;
+      overflow: hidden;
+    }
+    .sidebar::before {
+      content:''; position:absolute; inset:0;
+      background-image:
+        linear-gradient(rgba(200,80,42,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,80,42,0.04) 1px, transparent 1px);
+      background-size: 32px 32px; pointer-events:none;
+    }
+    .sidebar-orb {
+      position:absolute; width:280px; height:280px; border-radius:50%;
+      background:radial-gradient(circle, rgba(200,80,42,0.12) 0%, transparent 65%);
+      bottom:-80px; right:-100px; pointer-events:none;
+      animation: orbDrift 12s ease-in-out infinite alternate;
+    }
+    @keyframes orbDrift { from{transform:translate(0,0) scale(1);} to{transform:translate(15px,-20px) scale(1.05);} }
+
+    .sidebar-inner { position:relative; z-index:1; display:flex; flex-direction:column; height:100%; }
+
+    .sidebar-logo {
+      display: flex; align-items:center; gap:9px;
+      text-decoration:none; margin-bottom:2rem;
+      padding: 0 0.25rem;
+    }
+    .sidebar-logo-mark {
+      width:32px; height:32px; border-radius:8px;
+      background:var(--accent); display:grid; place-items:center;
+      transition:transform var(--trans);
+    }
+    .sidebar-logo:hover .sidebar-logo-mark { transform:rotate(-6deg) scale(1.06); }
+    .sidebar-logo-name {
+      font-family:var(--font-display); font-size:1.3rem;
+      color:white; letter-spacing:-0.01em;
+    }
+    .sidebar-logo-name em { font-style:italic; color:var(--accent-light); }
+
+    .sidebar-section-label {
+      font-size:0.6rem; font-weight:600; letter-spacing:0.12em;
+      text-transform:uppercase; color:rgba(255,255,255,0.22);
+      padding: 0 0.5rem; margin-bottom:0.4rem; margin-top:0.5rem;
+    }
+
+    .nav-item {
+      display:flex; align-items:center; gap:0.65rem;
+      padding:0.6rem 0.7rem; border-radius:8px;
+      text-decoration:none; font-size:0.84rem; font-weight:500;
+      color:rgba(255,255,255,0.5);
+      transition:background var(--trans), color var(--trans), transform var(--trans);
+      margin-bottom:1px; position:relative;
+    }
+    .nav-item svg { width:16px; height:16px; flex-shrink:0; opacity:0.7; transition:opacity var(--trans); }
+    .nav-item:hover { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.88); transform:translateX(2px); }
+    .nav-item:hover svg { opacity:1; }
+    .nav-item.active {
+      background:rgba(200,80,42,0.18); color:var(--accent-light);
+    }
+    .nav-item.active svg { opacity:1; color:var(--accent-light); }
+    .nav-item.active::before {
+      content:''; position:absolute; left:0; top:25%; bottom:25%;
+      width:3px; background:var(--accent); border-radius:99px;
+    }
+
+    .nav-badge {
+      margin-left:auto; background:var(--accent);
+      color:white; font-size:0.6rem; font-weight:700;
+      padding:0.1rem 0.45rem; border-radius:99px;
+    }
+
+    .sidebar-divider { height:1px; background:rgba(255,255,255,0.06); margin:0.75rem 0; }
+
+    .sidebar-user {
+      margin-top:auto; padding:0.75rem; border-radius:var(--radius-sm);
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.06);
+      display:flex; align-items:center; gap:0.65rem;
+    }
+    .user-av {
+      width:32px; height:32px; border-radius:50%;
+      background:var(--accent); display:grid; place-items:center;
+      font-size:0.65rem; font-weight:700; color:white; flex-shrink:0;
+    }
+    .user-name { font-size:0.82rem; font-weight:500; color:rgba(255,255,255,0.75); }
+    .user-role { font-size:0.68rem; color:rgba(255,255,255,0.28); }
+    .user-logout {
+      margin-left:auto; color:rgba(255,255,255,0.25);
+      cursor:pointer; transition:color var(--trans);
+    }
+    .user-logout:hover { color:rgba(255,255,255,0.6); }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position:fixed; top:0; left:var(--sidebar-w); right:0;
+      height:56px; z-index:90;
+      background:rgba(245,242,236,0.9);
+      backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 2rem;
+    }
+    .topbar-left {
+      display:flex; align-items:center; gap:0.5rem;
+      font-size:0.78rem; color:var(--muted);
+    }
+    .topbar-left span { color:var(--ink); font-weight:500; }
+    .topbar-sep { opacity:0.35; }
+    .topbar-right { display:flex; align-items:center; gap:0.75rem; }
+    .topbar-btn {
+      width:34px; height:34px; border-radius:8px;
+      border:1px solid var(--border);
+      background:var(--surface);
+      display:grid; place-items:center;
+      cursor:pointer; transition:background var(--trans), border-color var(--trans), transform var(--trans);
+    }
+    .topbar-btn:hover { background:var(--cream); border-color:var(--border-strong); transform:translateY(-1px); }
+    .topbar-btn svg { width:15px; height:15px; stroke:var(--muted); }
+    .topbar-date {
+      font-size:0.78rem; color:var(--muted);
+      background:var(--surface); border:1px solid var(--border);
+      padding:0.3rem 0.75rem; border-radius:99px;
+    }
+    .notif-dot { position:relative; }
+    .notif-dot::after {
+      content:''; position:absolute; top:6px; right:6px;
+      width:6px; height:6px; border-radius:50%;
+      background:var(--accent); border:1.5px solid var(--paper);
+    }
+
+    /* ── MAIN CONTENT ── */
+    .main-content {
+      margin-left: var(--sidebar-w);
+      margin-top: 56px;
+      padding: 2rem;
+      min-height: calc(100vh - 56px);
+    }
+
+    /* ── HERO ── */
+    .dash-hero {
+      background: var(--ink);
+      border-radius: var(--radius);
+      padding: 2.5rem;
+      margin-bottom: 1.75rem;
+      position:relative; overflow:hidden;
+    }
+    .dash-hero::before {
+      content:''; position:absolute; inset:0;
+      background-image:
+        linear-gradient(rgba(200,80,42,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,80,42,0.05) 1px, transparent 1px);
+      background-size:40px 40px; pointer-events:none;
+    }
+    .hero-orb-1 {
+      position:absolute; width:400px; height:400px; border-radius:50%;
+      background:radial-gradient(circle, rgba(200,80,42,0.16) 0%, transparent 65%);
+      top:-150px; right:-80px; pointer-events:none;
+      animation:orbDrift 16s ease-in-out infinite alternate;
+    }
+    .hero-orb-2 {
+      position:absolute; width:200px; height:200px; border-radius:50%;
+      background:radial-gradient(circle, rgba(201,168,76,0.1) 0%, transparent 70%);
+      bottom:-60px; left:20%; pointer-events:none;
+      animation:orbDrift 10s ease-in-out infinite alternate-reverse;
+    }
+    .dash-hero-inner {
+      position:relative; z-index:1;
+      display:grid; grid-template-columns:1fr auto; gap:2rem; align-items:center;
+    }
+    .hero-eyebrow {
+      font-size:0.68rem; font-weight:600; letter-spacing:0.12em;
+      text-transform:uppercase; color:var(--accent-light);
+      display:flex; align-items:center; gap:0.5rem;
+      margin-bottom:0.65rem;
+      opacity:0; animation:fadeUp 0.5s 0.1s forwards;
+    }
+    .hero-eyebrow::before { content:''; width:18px; height:1px; background:var(--accent-light); }
+    .dash-hero h1 {
+      font-family:var(--font-display);
+      font-size:2.6rem; line-height:1.08; letter-spacing:-0.02em;
+      color:white; margin-bottom:0.5rem;
+      opacity:0; animation:fadeUp 0.55s 0.18s forwards;
+    }
+    .dash-hero h1 em { font-style:italic; color:var(--accent-light); }
+    .dash-hero p {
+      font-size:0.88rem; color:rgba(255,255,255,0.45);
+      line-height:1.7; max-width:440px;
+      font-weight:300;
+      opacity:0; animation:fadeUp 0.55s 0.26s forwards;
+    }
+    .hero-stats-row {
+      display:flex; gap:2rem; margin-top:2rem; padding-top:1.5rem;
+      border-top:1px solid rgba(255,255,255,0.07);
+      opacity:0; animation:fadeUp 0.5s 0.36s forwards;
+    }
+    .hero-stat { }
+    .hero-stat-num {
+      font-family:var(--font-display); font-size:2.2rem;
+      color:white; line-height:1;
+    }
+    .hero-stat-num.accent { color:var(--accent-light); }
+    .hero-stat-num.gold { color:var(--gold); }
+    .hero-stat-label {
+      font-size:0.72rem; color:rgba(255,255,255,0.35);
+      margin-top:0.2rem; letter-spacing:0.03em;
+    }
+
+    /* Focus card */
+    .focus-card {
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:var(--radius-sm);
+      padding:1.25rem 1.4rem;
+      min-width:220px;
+      opacity:0; animation:fadeIn 0.7s 0.4s forwards;
+    }
+    .focus-label {
+      font-size:0.64rem; font-weight:600; letter-spacing:0.1em;
+      text-transform:uppercase; color:rgba(255,255,255,0.28);
+      margin-bottom:0.9rem;
+    }
+    .focus-task {
+      font-size:0.88rem; font-weight:500;
+      color:rgba(255,255,255,0.85);
+      margin-bottom:0.3rem; line-height:1.4;
+    }
+    .focus-meta { font-size:0.74rem; color:rgba(255,255,255,0.35); margin-bottom:1rem; }
+    .focus-progress-bar { height:4px; background:rgba(255,255,255,0.1); border-radius:99px; overflow:hidden; }
+    .focus-progress-fill {
+      height:100%; background:var(--accent);
+      border-radius:99px;
+      animation:progressGrow 1.2s 0.8s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes progressGrow { from{width:0;} }
+    .focus-pct { font-size:0.7rem; color:rgba(255,255,255,0.35); margin-top:0.35rem; text-align:right; }
+
+    /* ── SECTION HEADER ── */
+    .section-head {
+      display:flex; align-items:flex-end; justify-content:space-between;
+      margin-bottom:1rem;
+    }
+    .section-eyebrow {
+      font-size:0.65rem; font-weight:600; letter-spacing:0.12em;
+      text-transform:uppercase; color:var(--accent);
+      display:flex; align-items:center; gap:0.4rem;
+      margin-bottom:0.3rem;
+    }
+    .section-eyebrow::before { content:''; width:14px; height:1px; background:var(--accent); }
+    .section-title {
+      font-family:var(--font-display); font-size:1.6rem;
+      line-height:1.15; letter-spacing:-0.01em;
+    }
+    .section-link {
+      font-size:0.78rem; font-weight:500; color:var(--muted);
+      text-decoration:none; display:flex; align-items:center; gap:0.3rem;
+      transition:color var(--trans);
+    }
+    .section-link:hover { color:var(--accent); }
+
+    /* ── QUICK ACTIONS ── */
+    .action-grid {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:0.75rem;
+      margin-bottom:1.75rem;
+    }
+    .action-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); padding:1.25rem;
+      cursor:pointer; text-decoration:none;
+      transition:transform var(--trans), box-shadow var(--trans), border-color var(--trans);
+      display:flex; flex-direction:column; gap:0.6rem;
+      opacity:0;
+    }
+    .action-card:hover {
+      transform:translateY(-3px);
+      box-shadow:var(--shadow-lg);
+      border-color:var(--border-strong);
+    }
+    .action-icon {
+      width:40px; height:40px; border-radius:10px;
+      display:grid; place-items:center;
+    }
+    .action-icon svg { width:18px; height:18px; }
+    .action-icon.orange { background:rgba(200,80,42,0.1); color:var(--accent); }
+    .action-icon.blue { background:var(--blue-light); color:var(--blue); }
+    .action-icon.green { background:var(--green-light); color:var(--green); }
+    .action-icon.gold { background:rgba(201,168,76,0.12); color:var(--gold); }
+    .action-title { font-size:0.88rem; font-weight:600; color:var(--ink); }
+    .action-desc { font-size:0.76rem; color:var(--muted); line-height:1.5; }
+
+    /* ── METRICS ── */
+    .metrics-grid {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:0.75rem;
+      margin-bottom:1.75rem;
+    }
+    .metric-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); padding:1.4rem;
+      transition:transform var(--trans), box-shadow var(--trans);
+      opacity:0; position:relative; overflow:hidden;
+    }
+    .metric-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+    .metric-card.accent-card { background:var(--ink); border-color:transparent; }
+    .metric-label {
+      font-size:0.68rem; font-weight:600; letter-spacing:0.08em;
+      text-transform:uppercase; color:var(--muted-2);
+      margin-bottom:0.65rem;
+    }
+    .accent-card .metric-label { color:rgba(255,255,255,0.35); }
+    .metric-num {
+      font-family:var(--font-display); font-size:2.4rem;
+      line-height:1; letter-spacing:-0.02em; color:var(--ink);
+      margin-bottom:0.5rem;
+    }
+    .accent-card .metric-num { color:white; }
+    .metric-sub {
+      font-size:0.75rem; color:var(--muted-2);
+      display:flex; align-items:center; gap:0.35rem;
+    }
+    .accent-card .metric-sub { color:rgba(255,255,255,0.35); }
+    .metric-badge {
+      font-size:0.65rem; font-weight:600; padding:0.15rem 0.5rem;
+      border-radius:99px;
+    }
+    .badge-up { background:var(--green-light); color:var(--green); }
+    .badge-warn { background:rgba(201,168,76,0.15); color:#7a5c00; }
+    .badge-accent { background:rgba(200,80,42,0.2); color:var(--accent); }
+    .metric-bar {
+      position:absolute; bottom:0; left:0; right:0;
+      height:3px; background:rgba(13,13,13,0.05);
+    }
+    .metric-bar-fill {
+      height:100%; border-radius:99px;
+      animation:progressGrow 1s 0.6s ease both;
+    }
+    .fill-accent { background:var(--accent); }
+    .fill-blue { background:var(--blue); }
+    .fill-green { background:var(--green); }
+    .fill-gold { background:var(--gold); }
+
+    /* ── GRID 2-COL ── */
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem; }
+    .three-col { display:grid; grid-template-columns:1.4fr 1fr; gap:0.75rem; margin-bottom:0.75rem; }
+
+    /* ── PANEL ── */
+    .panel {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); padding:1.5rem;
+      opacity:0;
+    }
+    .panel-head {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:1.25rem;
+    }
+    .panel-title {
+      font-family:var(--font-display); font-size:1.15rem;
+      letter-spacing:-0.01em;
+    }
+    .panel-action {
+      font-size:0.75rem; color:var(--muted); text-decoration:none;
+      border:1px solid var(--border); padding:0.3rem 0.7rem;
+      border-radius:99px; transition:all var(--trans);
+    }
+    .panel-action:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-glow); }
+
+    /* ── SVG CHART (donut) ── */
+    .donut-wrap { display:flex; align-items:center; gap:1.5rem; }
+    .donut-svg { flex-shrink:0; }
+    .donut-legend { display:flex; flex-direction:column; gap:0.55rem; }
+    .legend-row { display:flex; align-items:center; gap:0.55rem; font-size:0.8rem; }
+    .legend-dot { width:9px; height:9px; border-radius:3px; flex-shrink:0; }
+    .legend-label { color:var(--muted); }
+    .legend-val { margin-left:auto; font-weight:600; color:var(--ink); }
+
+    /* ── BAR CHART ── */
+    .bar-chart { display:flex; align-items:flex-end; gap:6px; height:90px; }
+    .bar-col { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
+    .bar {
+      width:100%; border-radius:4px 4px 0 0;
+      background:var(--cream);
+      transition:background var(--trans);
+      cursor:pointer; position:relative;
+    }
+    .bar:hover { background:var(--accent-light) !important; }
+    .bar.active { background:var(--accent) !important; }
+    .bar-label { font-size:0.62rem; color:var(--muted-2); }
+
+    /* ── INSIGHTS ── */
+    .insight-list { display:flex; flex-direction:column; gap:0.65rem; }
+    .insight-item {
+      display:flex; align-items:flex-start; gap:0.75rem;
+      padding:0.75rem; border-radius:var(--radius-sm);
+      background:var(--paper); border:1px solid var(--border);
+      transition:background var(--trans);
+    }
+    .insight-item:hover { background:var(--cream); }
+    .insight-icon {
+      width:32px; height:32px; border-radius:8px;
+      display:grid; place-items:center; flex-shrink:0;
+      font-size:0.9rem;
+    }
+    .insight-text { font-size:0.82rem; color:var(--ink); line-height:1.5; }
+    .insight-meta { font-size:0.7rem; color:var(--muted-2); margin-top:0.15rem; }
+
+    /* ── TASK LIST ── */
+    .task-list { display:flex; flex-direction:column; gap:0.5rem; }
+    .task-item {
+      display:flex; align-items:center; gap:0.75rem;
+      padding:0.75rem 0.85rem; border-radius:var(--radius-sm);
+      background:var(--paper); border:1px solid var(--border);
+      transition:background var(--trans), transform var(--trans);
+      cursor:pointer;
+    }
+    .task-item:hover { background:var(--cream); transform:translateX(3px); }
+    .task-check {
+      width:18px; height:18px; border-radius:50%;
+      border:1.5px solid var(--border-strong);
+      display:grid; place-items:center; flex-shrink:0;
+      transition:background var(--trans), border-color var(--trans);
+    }
+    .task-item:hover .task-check { border-color:var(--accent); }
+    .task-check.done { background:var(--accent); border-color:var(--accent); }
+    .task-check.done::after { content:'✓'; font-size:0.6rem; color:white; font-weight:700; }
+    .task-name { font-size:0.84rem; font-weight:500; color:var(--ink); flex:1; }
+    .task-name.done { text-decoration:line-through; color:var(--muted-2); }
+    .task-meta { font-size:0.7rem; color:var(--muted-2); }
+    .priority-dot {
+      width:7px; height:7px; border-radius:50%; flex-shrink:0;
+    }
+    .p-high { background:#d94040; }
+    .p-med  { background:var(--gold); }
+    .p-low  { background:var(--green); }
+    .due-badge {
+      font-size:0.65rem; font-weight:600; padding:0.12rem 0.45rem;
+      border-radius:99px;
+    }
+    .due-urgent { background:#ffe9e9; color:#991414; }
+    .due-soon   { background:rgba(201,168,76,0.15); color:#7a5c00; }
+    .due-ok     { background:var(--green-light); color:var(--green); }
+
+    /* ── GROUP PROGRESS ── */
+    .group-list { display:flex; flex-direction:column; gap:0.6rem; }
+    .group-item {
+      display:flex; flex-direction:column; gap:0.45rem;
+      padding:0.85rem; border-radius:var(--radius-sm);
+      background:var(--paper); border:1px solid var(--border);
+      transition:background var(--trans);
+    }
+    .group-item:hover { background:var(--cream); }
+    .group-item-top { display:flex; align-items:center; gap:0.6rem; }
+    .group-av {
+      width:28px; height:28px; border-radius:7px;
+      display:grid; place-items:center;
+      font-size:0.62rem; font-weight:700; color:white; flex-shrink:0;
+    }
+    .group-name { font-size:0.84rem; font-weight:600; color:var(--ink); flex:1; }
+    .group-count { font-size:0.72rem; color:var(--muted-2); }
+    .group-bar { height:5px; background:rgba(13,13,13,0.06); border-radius:99px; overflow:hidden; }
+    .group-bar-fill {
+      height:100%; border-radius:99px;
+      animation:progressGrow 1s ease both;
+    }
+    .group-bar-meta { display:flex; justify-content:space-between; font-size:0.68rem; color:var(--muted-2); }
+
+    /* ── FLASH ── */
+    #flash-container { margin-bottom:1rem; }
+    #flash-container:empty { display:none; }
+    .flash {
+      padding:0.65rem 1rem; border-radius:var(--radius-sm);
+      font-size:0.83rem; font-weight:500; border:1px solid;
+      animation:fadeUp 0.3s ease;
+    }
+    .flash-error { background:#fff2f0; border-color:#ffd3cc; color:#991414; }
+    .flash-success { background:#f0fdf6; border-color:#c6f0da; color:#166534; }
+
+    /* ── REVEAL ANIMATIONS ── */
+    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(18px);} to{opacity:1;transform:translateY(0);} }
+
+    .reveal { animation:fadeUp 0.55s ease both; }
+    .d1 { animation-delay:0.08s; }
+    .d2 { animation-delay:0.16s; }
+    .d3 { animation-delay:0.22s; }
+    .d4 { animation-delay:0.28s; }
+    .d5 { animation-delay:0.34s; }
+    .d6 { animation-delay:0.40s; }
+    .d7 { animation-delay:0.46s; }
+    .d8 { animation-delay:0.52s; }
+
+    /* Mobile */
+    @media (max-width: 900px) {
+      .sidebar { transform:translateX(-100%); }
+      .layout-app { grid-template-columns: 1fr; }
+      .main-content { margin-left:0; }
+      .topbar { left:0; }
+      .action-grid, .metrics-grid { grid-template-columns:1fr 1fr; }
+      .two-col, .three-col { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-orb"></div>
+  <div class="sidebar-inner">
+
+    <a href="index.html" class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
+          <polyline points="4,10 8,14 16,6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="sidebar-logo-name">Task<em>ly</em></span>
+    </a>
+
+    <div class="sidebar-section-label">Main</div>
+
+    <a href="dashboard.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a href="tasks.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-2 10h10l-9 10 2-10H3Z"/></svg>
+      Tasks
+      <span class="nav-badge">5</span>
+    </a>
+    <a href="groups.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Groups
+    </a>
+    <a href="activity.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Activity
+    </a>
+
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section-label">Account</div>
+
+    <a href="profile.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Profile
+    </a>
+    <a href="settings.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
+    <a href="admin.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+      Admin
+    </a>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-user">
+      <div class="user-av">JD</div>
+      <div>
+        <div class="user-name">Jamie D.</div>
+        <div class="user-role">Leader</div>
+      </div>
+      <div class="user-logout" title="Sign out">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </div>
     </div>
-    <script type="module" src="assets/js/pages/dashboard.js"></script>
-  </body>
+
+  </div>
+</aside>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <span>Taskly</span>
+    <span class="topbar-sep">/</span>
+    <span>Dashboard</span>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-date" id="topbar-date">—</div>
+    <div class="topbar-btn notif-dot" title="Notifications">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </div>
+    <div class="topbar-btn" title="Search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN CONTENT -->
+<main class="main-content">
+  <div id="flash-container"></div>
+
+  <!-- HERO -->
+  <section class="dash-hero">
+    <div class="hero-orb-1"></div>
+    <div class="hero-orb-2"></div>
+    <div class="dash-hero-inner">
+      <div>
+        <div class="hero-eyebrow">Dashboard</div>
+        <h1>Project <em>overview</em></h1>
+        <p>Track group momentum, personal work, and the next upcoming deadlines from one place.</p>
+        <div class="hero-stats-row">
+          <div class="hero-stat">
+            <div class="hero-stat-num accent" id="stat-total">24</div>
+            <div class="hero-stat-label">Total tasks</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num" id="stat-done">14</div>
+            <div class="hero-stat-label">Completed</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num gold" id="stat-due">3</div>
+            <div class="hero-stat-label">Due today</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num" id="stat-groups">4</div>
+            <div class="hero-stat-label">Active groups</div>
+          </div>
+        </div>
+      </div>
+      <div class="focus-card">
+        <div class="focus-label">Next priority</div>
+        <div class="focus-task">UI Design Review</div>
+        <div class="focus-meta">Frontend Team · Due in 2 days</div>
+        <div class="focus-progress-bar">
+          <div class="focus-progress-fill" style="width:72%"></div>
+        </div>
+        <div class="focus-pct">72% complete</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUICK ACTIONS -->
+  <div class="section-head reveal d1">
+    <div>
+      <div class="section-eyebrow">Action center</div>
+      <div class="section-title">Move the work forward</div>
+    </div>
+  </div>
+  <div class="action-grid">
+    <a href="tasks.html?new=1" class="action-card reveal d1">
+      <div class="action-icon orange">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+      <div class="action-title">New Task</div>
+      <div class="action-desc">Create and assign a task to your team</div>
+    </a>
+    <a href="groups.html?new=1" class="action-card reveal d2">
+      <div class="action-icon blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/></svg>
+      </div>
+      <div class="action-title">Create Group</div>
+      <div class="action-desc">Start a new project group and invite members</div>
+    </a>
+    <a href="activity.html" class="action-card reveal d3">
+      <div class="action-icon green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <div class="action-title">Activity Feed</div>
+      <div class="action-desc">See what your team has been working on</div>
+    </a>
+    <a href="admin.html" class="action-card reveal d4">
+      <div class="action-icon gold">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+      </div>
+      <div class="action-title">Admin Panel</div>
+      <div class="action-desc">Manage users and export project data</div>
+    </a>
+  </div>
+
+  <!-- METRICS -->
+  <div class="section-head reveal d2">
+    <div>
+      <div class="section-eyebrow">Performance</div>
+      <div class="section-title">Read the room quickly</div>
+    </div>
+  </div>
+  <div class="metrics-grid">
+    <div class="metric-card accent-card reveal d1">
+      <div class="metric-label">Completion rate</div>
+      <div class="metric-num">58%</div>
+      <div class="metric-sub">
+        <span class="metric-badge badge-accent">+6% this week</span>
+      </div>
+      <div class="metric-bar"><div class="metric-bar-fill fill-accent" style="width:58%"></div></div>
+    </div>
+    <div class="metric-card reveal d2">
+      <div class="metric-label">Tasks in progress</div>
+      <div class="metric-num">7</div>
+      <div class="metric-sub">
+        <span class="metric-badge badge-warn">2 overdue</span>
+      </div>
+      <div class="metric-bar"><div class="metric-bar-fill fill-blue" style="width:45%"></div></div>
+    </div>
+    <div class="metric-card reveal d3">
+      <div class="metric-label">On-time delivery</div>
+      <div class="metric-num">83%</div>
+      <div class="metric-sub">
+        <span class="metric-badge badge-up">↑ Strong</span>
+      </div>
+      <div class="metric-bar"><div class="metric-bar-fill fill-green" style="width:83%"></div></div>
+    </div>
+    <div class="metric-card reveal d4">
+      <div class="metric-label">Team activity</div>
+      <div class="metric-num">12</div>
+      <div class="metric-sub">updates today</div>
+      <div class="metric-bar"><div class="metric-bar-fill fill-gold" style="width:68%"></div></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="three-col">
+    <!-- Donut chart -->
+    <div class="panel reveal d2">
+      <div class="panel-head">
+        <div class="panel-title">Task breakdown</div>
+        <a href="tasks.html" class="panel-action">View all</a>
+      </div>
+      <div class="donut-wrap">
+        <svg class="donut-svg" width="110" height="110" viewBox="0 0 110 110">
+          <circle cx="55" cy="55" r="40" fill="none" stroke="#f0ece4" stroke-width="16"/>
+          <!-- done: 58% = 251.3 -->
+          <circle cx="55" cy="55" r="40" fill="none" stroke="#c8502a" stroke-width="16"
+            stroke-dasharray="146 251" stroke-dashoffset="63" stroke-linecap="round"
+            style="animation:donutSpin 1.2s 0.3s cubic-bezier(.4,0,.2,1) both">
+          </circle>
+          <!-- in progress: 29% = 73 -->
+          <circle cx="55" cy="55" r="40" fill="none" stroke="#c9a84c" stroke-width="16"
+            stroke-dasharray="73 251" stroke-dashoffset="-83" stroke-linecap="round"
+            style="animation:donutSpin 1.2s 0.45s cubic-bezier(.4,0,.2,1) both">
+          </circle>
+          <!-- pending: 13% = 32 -->
+          <circle cx="55" cy="55" r="40" fill="none" stroke="#e8e2d8" stroke-width="16"
+            stroke-dasharray="32 251" stroke-dashoffset="-156" stroke-linecap="round">
+          </circle>
+          <text x="55" y="50" text-anchor="middle" font-family="Instrument Serif,serif"
+            font-size="20" fill="#0d0d0d" dy="0">14</text>
+          <text x="55" y="64" text-anchor="middle" font-family="DM Sans,sans-serif"
+            font-size="7.5" fill="#a09890">done</text>
+        </svg>
+        <div class="donut-legend">
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#c8502a"></div>
+            <span class="legend-label">Completed</span>
+            <span class="legend-val">14</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#c9a84c"></div>
+            <span class="legend-label">In progress</span>
+            <span class="legend-val">7</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#e8e2d8"></div>
+            <span class="legend-label">Pending</span>
+            <span class="legend-val">3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Insights -->
+    <div class="panel reveal d3">
+      <div class="panel-head">
+        <div class="panel-title">Smart insights</div>
+      </div>
+      <div class="insight-list">
+        <div class="insight-item">
+          <div class="insight-icon" style="background:rgba(200,80,42,0.1)">🔥</div>
+          <div>
+            <div class="insight-text">2 high-priority tasks are overdue and need attention.</div>
+            <div class="insight-meta">Action required</div>
+          </div>
+        </div>
+        <div class="insight-item">
+          <div class="insight-icon" style="background:rgba(26,122,74,0.08)">✅</div>
+          <div>
+            <div class="insight-text">Completion rate improved 6% compared to last week.</div>
+            <div class="insight-meta">Great progress</div>
+          </div>
+        </div>
+        <div class="insight-item">
+          <div class="insight-icon" style="background:rgba(201,168,76,0.12)">📅</div>
+          <div>
+            <div class="insight-text">3 deadlines are falling on the same day — consider redistributing.</div>
+            <div class="insight-meta">Heads up</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="two-col">
+    <!-- Weekly activity bar chart -->
+    <div class="panel reveal d3">
+      <div class="panel-head">
+        <div class="panel-title">Weekly activity</div>
+        <span style="font-size:0.74rem;color:var(--muted)">Tasks completed / day</span>
+      </div>
+      <div class="bar-chart" id="bar-chart">
+        <!-- rendered by JS -->
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;">
+        <span style="font-size:0.62rem;color:var(--muted-2)">Mon</span>
+        <span style="font-size:0.62rem;color:var(--muted-2)">Tue</span>
+        <span style="font-size:0.62rem;color:var(--muted-2)">Wed</span>
+        <span style="font-size:0.62rem;color:var(--muted-2)">Thu</span>
+        <span style="font-size:0.62rem;color:var(--muted-2)">Fri</span>
+        <span style="font-size:0.62rem;color:var(--muted-2)">Sat</span>
+        <span style="font-size:0.62rem;color:var(--muted-2)">Sun</span>
+      </div>
+    </div>
+
+    <!-- Priority distribution mini-bars -->
+    <div class="panel reveal d4">
+      <div class="panel-head">
+        <div class="panel-title">Priority mix</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1rem;margin-top:0.25rem;">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:0.35rem;">
+            <span style="color:var(--muted)">High priority</span>
+            <span style="font-weight:600">6 tasks</span>
+          </div>
+          <div style="height:8px;background:rgba(13,13,13,0.06);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:50%;background:#d94040;border-radius:99px;animation:progressGrow 1s 0.3s ease both"></div>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:0.35rem;">
+            <span style="color:var(--muted)">Medium priority</span>
+            <span style="font-weight:600">10 tasks</span>
+          </div>
+          <div style="height:8px;background:rgba(13,13,13,0.06);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:75%;background:var(--gold);border-radius:99px;animation:progressGrow 1s 0.45s ease both"></div>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:0.35rem;">
+            <span style="color:var(--muted)">Low priority</span>
+            <span style="font-weight:600">8 tasks</span>
+          </div>
+          <div style="height:8px;background:rgba(13,13,13,0.06);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:60%;background:var(--green);border-radius:99px;animation:progressGrow 1s 0.6s ease both"></div>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:1rem;display:flex;gap:1.5rem;">
+          <div>
+            <div style="font-family:var(--font-display);font-size:1.6rem;line-height:1">24</div>
+            <div style="font-size:0.7rem;color:var(--muted-2)">Total tasks</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-display);font-size:1.6rem;line-height:1;color:var(--accent)">4</div>
+            <div style="font-size:0.7rem;color:var(--muted-2)">Groups active</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-display);font-size:1.6rem;line-height:1;color:var(--green)">83%</div>
+            <div style="font-size:0.7rem;color:var(--muted-2)">On time</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM ROW -->
+  <div class="two-col">
+    <!-- Upcoming tasks -->
+    <div class="panel reveal d4">
+      <div class="panel-head">
+        <div class="panel-title">Upcoming tasks</div>
+        <a href="tasks.html" class="panel-action">Manage →</a>
+      </div>
+      <div class="task-list" id="upcoming-tasks"></div>
+    </div>
+
+    <!-- Group progress -->
+    <div class="panel reveal d5">
+      <div class="panel-head">
+        <div class="panel-title">Group progress</div>
+        <a href="groups.html" class="panel-action">Open →</a>
+      </div>
+      <div class="group-list" id="group-progress"></div>
+    </div>
+  </div>
+
+</main>
+
+<style>
+  @keyframes donutSpin {
+    from { stroke-dasharray: 0 251; }
+  }
+</style>
+
+<script>
+  /* ── cursor ── */
+  const cur = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove', e=>{ mx=e.clientX; my=e.clientY; cur.style.left=mx+'px'; cur.style.top=my+'px'; });
+  (function loop(){ rx+=(mx-rx)*0.13; ry+=(my-ry)*0.13; ring.style.left=rx+'px'; ring.style.top=ry+'px'; requestAnimationFrame(loop); })();
+  document.querySelectorAll('a,button,.action-card,.task-item,.group-item,.nav-item').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{ cur.style.width='17px'; cur.style.height='17px'; ring.style.width='46px'; ring.style.height='46px'; ring.style.opacity='.2'; });
+    el.addEventListener('mouseleave',()=>{ cur.style.width='10px'; cur.style.height='10px'; ring.style.width='30px'; ring.style.height='30px'; ring.style.opacity='.4'; });
+  });
+
+  /* ── date ── */
+  const now = new Date();
+  document.getElementById('topbar-date').textContent = now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+  /* ── bar chart ── */
+  const bars = [2,4,3,6,5,1,3];
+  const today = now.getDay() === 0 ? 6 : now.getDay() - 1;
+  const maxBar = Math.max(...bars);
+  const bc = document.getElementById('bar-chart');
+  bars.forEach((val, i) => {
+    const col = document.createElement('div');
+    col.className = 'bar-col';
+    const bar = document.createElement('div');
+    bar.className = 'bar' + (i === today ? ' active' : '');
+    const h = Math.round((val / maxBar) * 80);
+    bar.style.cssText = `height:${h}px;background:${i===today?'var(--accent)':'var(--cream)'};transition:height 0.8s ${0.1*i+0.3}s cubic-bezier(.34,1.56,.64,1)`;
+    // Animate from 0
+    bar.style.height = '4px';
+    setTimeout(()=>{ bar.style.height = h+'px'; }, 50);
+    col.appendChild(bar);
+    bc.appendChild(col);
+  });
+
+  /* ── tasks ── */
+  const tasks = [
+    { name:'UI Design Review', due:'Today', priority:'high', done:false },
+    { name:'Write API documentation', due:'Tomorrow', priority:'med', done:false },
+    { name:'User testing session', due:'In 3 days', priority:'high', done:false },
+    { name:'Backend auth refactor', due:'In 4 days', priority:'med', done:true },
+    { name:'Presentation slides', due:'Next week', priority:'low', done:false },
+  ];
+  const tl = document.getElementById('upcoming-tasks');
+  tasks.forEach((t,i) => {
+    const el = document.createElement('div');
+    el.className = 'task-item';
+    el.style.cssText = `opacity:0;animation:fadeUp 0.4s ${0.1+i*0.07}s ease forwards`;
+    const dueCls = t.due==='Today'?'due-urgent':t.due==='Tomorrow'?'due-soon':'due-ok';
+    el.innerHTML = `
+      <div class="task-check ${t.done?'done':''}"></div>
+      <div class="priority-dot p-${t.priority}"></div>
+      <span class="task-name ${t.done?'done':''}">${t.name}</span>
+      <span class="due-badge ${dueCls}">${t.due}</span>
+    `;
+    el.addEventListener('click', ()=>{
+      const chk = el.querySelector('.task-check');
+      const nm  = el.querySelector('.task-name');
+      chk.classList.toggle('done'); nm.classList.toggle('done');
+    });
+    tl.appendChild(el);
+  });
+
+  /* ── groups ── */
+  const groups = [
+    { name:'Frontend Team', members:4, done:72, total:10, color:'#c8502a', initials:'FT' },
+    { name:'Backend Squad', members:3, done:45, total:8,  color:'#2563ba', initials:'BS' },
+    { name:'Design Circle', members:2, done:88, total:6,  color:'#c9a84c', initials:'DC' },
+    { name:'QA & Testing', members:3, done:30, total:5,   color:'#1a7a4a', initials:'QA' },
+  ];
+  const gl = document.getElementById('group-progress');
+  groups.forEach((g,i) => {
+    const el = document.createElement('div');
+    el.className = 'group-item';
+    el.style.cssText = `opacity:0;animation:fadeUp 0.4s ${0.12+i*0.08}s ease forwards`;
+    el.innerHTML = `
+      <div class="group-item-top">
+        <div class="group-av" style="background:${g.color}">${g.initials}</div>
+        <span class="group-name">${g.name}</span>
+        <span class="group-count">${g.members} members</span>
+      </div>
+      <div class="group-bar">
+        <div class="group-bar-fill" style="width:${g.done}%;background:${g.color};animation-delay:${0.2+i*0.1}s"></div>
+      </div>
+      <div class="group-bar-meta">
+        <span>${g.done}% complete</span>
+        <span>${Math.round(g.total*g.done/100)}/${g.total} tasks</span>
+      </div>
+    `;
+    gl.appendChild(el);
+  });
+
+  /* ── scroll reveal ── */
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting) { e.target.style.opacity='1'; obs.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.panel,.action-card,.metric-card').forEach(el => obs.observe(el));
+</script>
+
+<script type="module" src="assets/js/pages/dashboard.js" onerror="console.log('dashboard.js not found — running standalone')"></script>
+</body>
 </html>

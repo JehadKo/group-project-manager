@@ -4,54 +4,704 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login — Taskly</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
   <style>
-    body { background: #f4f9f7; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; }
-    .login-container { display: grid; grid-template-columns: 1fr 1.2fr; max-width: 1000px; background: white; border-radius: 2rem; overflow: hidden; box-shadow: 0 18px 40px rgba(15, 38, 31, 0.12); }
-    .login-visual { background: #0d1f1a; padding: 4rem; color: white; display: flex; flex-direction: column; justify-content: center; background-image: url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=800'); background-size: cover; position: relative; }
-    .login-visual::before { content: ""; position: absolute; inset: 0; background: rgba(15, 118, 110, 0.85); }
-    .login-visual-content { position: relative; z-index: 1; }
-    .login-form-area { padding: 4rem; }
-    .input-group { margin-bottom: 1.5rem; }
-    .input-group label { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.8rem; margin-bottom: 0.5rem; color: #5a7a72; text-transform: uppercase; }
-    .forgot-link { text-transform: none; color: #1a9e74; text-decoration: none; font-weight: 500; }
-    .input-group input { width: 100%; padding: 1rem; border: 1.5px solid #cde5dc; border-radius: 1rem; outline: none; transition: 0.2s; }
-    .input-group input:focus { border-color: #1a9e74; box-shadow: 0 0 0 4px #d0f2e8; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; padding: .65rem 1.4rem; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: .9rem; cursor: pointer; transition: all .2s; border: none; background: #1a9e74; color: #fff; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    :root {
+      --ink: #0d0d0d;
+      --paper: #f5f2ec;
+      --cream: #ede9e0;
+      --accent: #c8502a;
+      --accent-light: #e8724f;
+      --accent-glow: rgba(200,80,42,0.15);
+      --gold: #c9a84c;
+      --muted: #7a7468;
+      --muted-2: #a09890;
+      --border: rgba(13,13,13,0.11);
+      --white: #ffffff;
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-body: 'DM Sans', sans-serif;
+      --radius: 10px;
+      --trans: 0.18s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      cursor: none;
+    }
+
+    /* Cursor */
+    .cursor {
+      position: fixed; top: 0; left: 0;
+      width: 10px; height: 10px;
+      background: var(--accent); border-radius: 50%;
+      pointer-events: none; z-index: 9999;
+      transform: translate(-50%,-50%);
+      transition: width 0.25s, height 0.25s, background 0.25s;
+    }
+    .cursor-ring {
+      position: fixed; top: 0; left: 0;
+      width: 32px; height: 32px;
+      border: 1.5px solid var(--accent); border-radius: 50%;
+      pointer-events: none; z-index: 9998;
+      transform: translate(-50%,-50%);
+      opacity: 0.4;
+    }
+
+    /* Noise */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9000; opacity: 0.35;
+    }
+
+    /* LAYOUT */
+    .auth-wrap {
+      display: grid;
+      grid-template-columns: 520px 1fr;
+      min-height: 100vh;
+    }
+
+    /* LEFT PANEL */
+    .auth-panel {
+      background: var(--ink);
+      position: sticky; top: 0;
+      height: 100vh;
+      padding: 3rem;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    .auth-panel::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(200,80,42,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,80,42,0.05) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+
+    .orb {
+      position: absolute; border-radius: 50%;
+      pointer-events: none;
+    }
+    .orb-1 {
+      width: 560px; height: 560px;
+      background: radial-gradient(circle, rgba(200,80,42,0.14) 0%, transparent 65%);
+      top: -180px; right: -160px;
+      animation: orbDrift 14s ease-in-out infinite alternate;
+    }
+    .orb-2 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(201,168,76,0.1) 0%, transparent 70%);
+      bottom: -60px; left: -80px;
+      animation: orbDrift 10s ease-in-out infinite alternate-reverse;
+    }
+    @keyframes orbDrift {
+      from { transform: translate(0,0) scale(1); }
+      to { transform: translate(20px,-30px) scale(1.06); }
+    }
+
+    .panel-content {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      height: 100%;
+    }
+
+    /* Logo */
+    .logo {
+      display: inline-flex; align-items: center; gap: 10px;
+      text-decoration: none;
+      opacity: 0; animation: fadeIn 0.5s 0.05s forwards;
+    }
+    .logo-mark {
+      width: 36px; height: 36px; border-radius: 9px;
+      background: var(--accent);
+      display: grid; place-items: center;
+      transition: transform var(--trans), background var(--trans);
+    }
+    .logo:hover .logo-mark { transform: rotate(-6deg) scale(1.06); background: var(--accent-light); }
+    .logo-name {
+      font-family: var(--font-display);
+      font-size: 1.5rem; color: var(--white);
+      letter-spacing: -0.01em;
+    }
+    .logo-name em { font-style: italic; color: var(--accent-light); }
+
+    /* Hero */
+    .panel-hero { margin: auto 0; padding: 3rem 0; }
+
+    .panel-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--accent-light);
+      border: 1px solid rgba(200,80,42,0.3);
+      border-radius: 99px; padding: 0.3rem 0.85rem;
+      margin-bottom: 1.75rem;
+      opacity: 0; animation: fadeIn 0.5s 0.15s forwards;
+    }
+    .panel-tag::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent-light);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:0.4; transform:scale(0.65); } }
+
+    .panel-title {
+      font-family: var(--font-display);
+      font-size: 3.4rem; line-height: 1.07;
+      color: var(--white); margin-bottom: 1.25rem;
+      letter-spacing: -0.02em;
+      opacity: 0; animation: fadeUp 0.65s 0.25s forwards;
+    }
+    .panel-title em { font-style: italic; color: var(--accent-light); }
+
+    .panel-desc {
+      font-size: 0.9rem; line-height: 1.8;
+      color: rgba(255,255,255,0.4);
+      max-width: 340px; font-weight: 300;
+      opacity: 0; animation: fadeUp 0.65s 0.36s forwards;
+    }
+
+    /* Testimonial / quote card */
+    .quote-card {
+      margin-top: 3rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.4rem;
+      opacity: 0; animation: fadeUp 0.55s 0.48s forwards;
+    }
+    .quote-text {
+      font-family: var(--font-display);
+      font-style: italic; font-size: 1.05rem;
+      color: rgba(255,255,255,0.75); line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+    .quote-author {
+      display: flex; align-items: center; gap: 0.65rem;
+    }
+    .quote-av {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--accent);
+      display: grid; place-items: center;
+      font-size: 0.62rem; font-weight: 700; color: white;
+      flex-shrink: 0;
+    }
+    .quote-name { font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.6); }
+    .quote-role { font-size: 0.7rem; color: rgba(255,255,255,0.28); }
+
+    /* Demo strip */
+    .panel-footer { margin-top: auto; padding-top: 2rem; }
+    .demo-strip {
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.03);
+      overflow: hidden;
+      opacity: 0; animation: fadeIn 0.5s 0.72s forwards;
+    }
+    .demo-strip-head {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.64rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: rgba(255,255,255,0.22);
+    }
+    .demo-rows { padding: 0.4rem; display: flex; flex-direction: column; gap: 2px; }
+    .demo-row {
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.5rem 0.65rem; border-radius: 7px;
+      font-size: 0.79rem; color: rgba(255,255,255,0.45);
+      transition: background var(--trans), transform var(--trans); cursor: pointer;
+      user-select: none;
+    }
+    .demo-row:hover { background: rgba(255,255,255,0.06); transform: translateX(3px); }
+    .demo-row:hover .demo-fill-hint { opacity: 1; }
+    .demo-av {
+      width: 27px; height: 27px; border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 0.58rem; font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .av-leader { background: var(--accent); }
+    .av-student { background: #1a6bbf; }
+    .av-admin { background: rgba(255,255,255,0.14); }
+    .demo-name { font-weight: 500; color: rgba(255,255,255,0.72); }
+    .demo-sep { opacity: 0.22; }
+    .demo-fill-hint {
+      margin-left: auto; font-size: 0.62rem;
+      color: var(--accent-light); opacity: 0;
+      transition: opacity var(--trans);
+    }
+    .demo-badge {
+      font-size: 0.62rem; font-weight: 600;
+      padding: 0.12rem 0.48rem; border-radius: 99px;
+    }
+    .badge-leader { background: rgba(200,80,42,0.2); color: var(--accent-light); }
+    .badge-student { background: rgba(26,107,191,0.2); color: #7ec4f8; }
+    .badge-admin { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.38); }
+
+    /* RIGHT PANEL */
+    .auth-form-panel {
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      padding: 3rem 2rem;
+      background: var(--white);
+      min-height: 100vh;
+      position: relative;
+    }
+    .auth-form-panel::before {
+      content: '';
+      position: absolute; top: 0; right: 0;
+      width: 260px; height: 260px;
+      background: radial-gradient(circle at 100% 0%, rgba(200,80,42,0.06), transparent 70%);
+      pointer-events: none;
+    }
+
+    .auth-form-inner {
+      width: 100%; max-width: 380px;
+      position: relative; z-index: 1;
+    }
+
+    /* Form header */
+    .form-header {
+      margin-bottom: 2.5rem;
+      opacity: 0; animation: fadeUp 0.55s 0.1s forwards;
+    }
+    .form-eyebrow {
+      font-size: 0.68rem; font-weight: 600; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 0.6rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .form-eyebrow::before { content: ''; display: block; width: 20px; height: 1px; background: var(--accent); }
+    .form-heading {
+      font-family: var(--font-display);
+      font-size: 2.75rem; line-height: 1.1;
+      letter-spacing: -0.02em; color: var(--ink);
+      margin-bottom: 0.4rem;
+    }
+    .form-sub { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+    .form-sub a { color: var(--accent); font-weight: 500; text-decoration: none; }
+    .form-sub a:hover { text-decoration: underline; }
+
+    /* Flash */
+    #flash-container { margin-bottom: 1rem; }
+    #flash-container:empty { display: none; }
+    .flash {
+      padding: 0.7rem 1rem; border-radius: var(--radius);
+      font-size: 0.83rem; font-weight: 500; border: 1px solid;
+      animation: fadeUp 0.3s ease;
+    }
+    .flash-error   { background: #fff2f0; border-color: #ffd3cc; color: #991414; }
+    .flash-success { background: #f0fdf6; border-color: #c6f0da; color: #166534; }
+
+    /* Form */
+    .form-grid { display: flex; flex-direction: column; gap: 1.1rem; }
+    .form-grid > *:nth-child(1) { opacity:0; animation: fadeUp 0.45s 0.2s  forwards; }
+    .form-grid > *:nth-child(2) { opacity:0; animation: fadeUp 0.45s 0.29s forwards; }
+    .form-grid > *:nth-child(3) { opacity:0; animation: fadeUp 0.45s 0.38s forwards; }
+    .form-grid > *:nth-child(4) { opacity:0; animation: fadeUp 0.45s 0.47s forwards; }
+
+    .field { display: flex; flex-direction: column; gap: 0.32rem; }
+    .field label {
+      font-size: 0.68rem; font-weight: 600;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--muted-2);
+    }
+    .label-row { display: flex; align-items: center; justify-content: space-between; }
+    .label-row label { margin-bottom: 0; }
+    .forgot-link {
+      font-size: 0.72rem; font-weight: 500;
+      color: var(--accent); text-decoration: none;
+      transition: color var(--trans);
+    }
+    .forgot-link:hover { color: var(--accent-light); text-decoration: underline; }
+
+    .field input {
+      padding: 0.72rem 0.95rem;
+      border: 1.5px solid rgba(13,13,13,0.12);
+      border-radius: var(--radius);
+      font-family: var(--font-body); font-size: 0.875rem;
+      color: var(--ink); background: var(--paper);
+      transition: border-color var(--trans), background var(--trans),
+                  box-shadow var(--trans), transform var(--trans);
+      outline: none; width: 100%;
+    }
+    .field input:hover { border-color: rgba(13,13,13,0.22); }
+    .field input:focus {
+      border-color: var(--accent);
+      background: var(--white);
+      box-shadow: 0 0 0 3.5px var(--accent-glow);
+      transform: translateY(-1px);
+    }
+    .field input::placeholder { color: #bab4aa; }
+    .field input.input-error { border-color: #e05050; box-shadow: 0 0 0 3px rgba(224,80,80,0.12); }
+
+    /* Password toggle */
+    .pw-wrap { position: relative; }
+    .pw-toggle {
+      position: absolute; right: 0.8rem; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      color: var(--muted-2); padding: 0;
+      transition: color var(--trans); line-height: 0;
+    }
+    .pw-toggle:hover { color: var(--accent); }
+    .pw-toggle svg { width: 15px; height: 15px; display: block; }
+
+    /* Remember me */
+    .check-row {
+      display: flex; align-items: center; gap: 0.55rem;
+    }
+    .check-row input[type="checkbox"] {
+      width: 16px; height: 16px; border-radius: 4px;
+      border: 1.5px solid rgba(13,13,13,0.2);
+      cursor: pointer; accent-color: var(--accent);
+      flex-shrink: 0;
+    }
+    .check-row label {
+      font-size: 0.83rem; color: var(--muted);
+      cursor: pointer; font-weight: 400;
+    }
+
+    /* Submit */
+    .btn-submit {
+      width: 100%; padding: 0.82rem 1rem;
+      background: var(--ink); color: var(--white);
+      border: none; border-radius: 99px;
+      font-family: var(--font-body); font-weight: 600;
+      font-size: 0.9rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      box-shadow: 0 4px 20px rgba(13,13,13,0.2);
+      transition: background var(--trans), transform var(--trans), box-shadow var(--trans);
+      position: relative; overflow: hidden;
+      letter-spacing: 0.01em;
+    }
+    .btn-submit svg { width: 15px; height: 15px; flex-shrink: 0; transition: transform 0.25s; }
+    .btn-submit:hover {
+      background: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(200,80,42,0.35);
+    }
+    .btn-submit:hover svg { transform: translateX(3px); }
+    .btn-submit:active { transform: translateY(0); }
+    .btn-submit::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%);
+      transform: translateX(-100%);
+    }
+    .btn-submit:hover::after { transform: translateX(100%); transition: transform 0.5s ease; }
+
+    /* Loading spinner inside button */
+    .btn-submit.loading { pointer-events: none; }
+    .btn-submit.loading .btn-text { opacity: 0; }
+    .btn-submit .spinner {
+      display: none;
+      position: absolute;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .btn-submit.loading .spinner { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Divider */
+    .divider {
+      display: flex; align-items: center; gap: 0.75rem;
+      font-size: 0.72rem; color: var(--muted-2);
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px;
+      background: rgba(13,13,13,0.08);
+    }
+
+    /* Form footer */
+    .form-footer {
+      text-align: center; font-size: 0.83rem;
+      color: var(--muted); margin-top: 1.5rem;
+      opacity: 0; animation: fadeIn 0.4s 0.65s forwards;
+    }
+    .form-footer a { color: var(--accent); font-weight: 500; text-decoration: none; }
+    .form-footer a:hover { text-decoration: underline; }
+
+    /* Back to home link */
+    .back-link {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.78rem; color: var(--muted);
+      text-decoration: none; margin-bottom: 2.5rem;
+      transition: color var(--trans);
+      opacity: 0; animation: fadeIn 0.4s 0.75s forwards;
+    }
+    .back-link:hover { color: var(--accent); }
+    .back-link svg { width: 13px; height: 13px; transition: transform 0.2s; }
+    .back-link:hover svg { transform: translateX(-3px); }
+
+    /* Deco */
+    .deco-letter {
+      position: absolute; bottom: 2rem; right: 2rem;
+      font-family: var(--font-display); font-size: 9rem;
+      font-style: italic; color: var(--ink); opacity: 0.03;
+      pointer-events: none; line-height: 1; user-select: none;
+    }
+
+    @keyframes fadeIn { from{ opacity:0; } to{ opacity:1; } }
+    @keyframes fadeUp { from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+
+    @media (max-width: 900px) {
+      .auth-wrap { grid-template-columns: 1fr; }
+      .auth-panel { display: none; }
+      .auth-form-panel { padding: 2.5rem 1.25rem; }
+    }
   </style>
 </head>
 <body>
-<div class="login-container">
-  <div class="login-visual">
-    <div class="login-visual-content">
-      <h2 style="font-family: 'Syne'; font-size: 2.5rem; margin-bottom: 1rem;">Focus on the work that matters.</h2>
-      <p style="opacity: 0.9; line-height: 1.6;">Taskly helps high-performing students synchronize their projects across every semester.</p>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<div class="auth-wrap">
+
+  <!-- LEFT PANEL -->
+  <aside class="auth-panel">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="panel-content">
+
+      <a href="index.html" class="logo">
+        <div class="logo-mark">
+          <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+            <polyline points="4,10 8,14 16,6" stroke="#fff" stroke-width="2.4"
+              stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="logo-name">Task<em>ly</em></span>
+      </a>
+
+      <div class="panel-hero">
+        <div class="panel-tag">Welcome back</div>
+        <h1 class="panel-title">
+          Focus on the<br>work that<br><em>matters most</em>
+        </h1>
+        <p class="panel-desc">
+          Your projects, teammates, and deadlines — all exactly where you left them.
+        </p>
+
+        <div class="quote-card">
+          <p class="quote-text">"Taskly turned our chaotic group project into something we were actually proud to present."</p>
+          <div class="quote-author">
+            <div class="quote-av">JK</div>
+            <div>
+              <div class="quote-name">Jamie K.</div>
+              <div class="quote-role">Computer Science, Year 3</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <div class="demo-strip">
+          <div class="demo-strip-head">Click a row to auto-fill credentials</div>
+          <div class="demo-rows">
+            <div class="demo-row" data-email="leader@taskly.demo" data-pw="demo1234">
+              <div class="demo-av av-leader">AL</div>
+              <span class="demo-name">Ahmed L.</span>
+              <span class="demo-sep">·</span>
+              <span>leader@taskly.demo</span>
+              <span class="demo-badge badge-leader">Leader</span>
+              <span class="demo-fill-hint">Fill ↗</span>
+            </div>
+            <div class="demo-row" data-email="student@taskly.demo" data-pw="demo1234">
+              <div class="demo-av av-student">SM</div>
+              <span class="demo-name">Sara M.</span>
+              <span class="demo-sep">·</span>
+              <span>student@taskly.demo</span>
+              <span class="demo-badge badge-student">Student</span>
+              <span class="demo-fill-hint">Fill ↗</span>
+            </div>
+            <div class="demo-row" data-email="admin@taskly.demo" data-pw="demo1234">
+              <div class="demo-av av-admin">AD</div>
+              <span class="demo-name">Admin</span>
+              <span class="demo-sep">·</span>
+              <span>admin@taskly.demo</span>
+              <span class="demo-badge badge-admin">Admin</span>
+              <span class="demo-fill-hint">Fill ↗</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
-  </div>
-  <div class="login-form-area">
-    <form id="login-form">
-      <h1 style="font-family: 'Syne'; margin-bottom: 0.5rem;">Sign In</h1>
-      <p style="color: #5a7a72; margin-bottom: 2rem;">Don't have an account? <a href="register.html" style="color: #1a9e74; font-weight: 700;">Create one</a></p>
+  </aside>
+
+  <!-- RIGHT PANEL -->
+  <main class="auth-form-panel">
+    <div class="deco-letter">S</div>
+    <div class="auth-form-inner">
+
+      <a href="index.html" class="back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        Back to home
+      </a>
+
+      <div class="form-header">
+        <div class="form-eyebrow">Sign In</div>
+        <h2 class="form-heading">Welcome<br>back</h2>
+        <p class="form-sub">No account yet? <a href="register.html">Create one →</a></p>
+      </div>
+
       <div id="flash-container"></div>
-      <div class="input-group">
-        <label>Email Address</label>
-        <input type="email" id="email" name="email" required placeholder="name@university.edu">
-      </div>
-      <div class="input-group">
-        <label>
-          Password
-          <a href="#" class="forgot-link">Forgot password?</a>
-        </label>
-        <input type="password" id="password" name="password" required placeholder="••••••••">
-      </div>
-      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; cursor: pointer;">
-        <input type="checkbox" id="rememberMe" name="rememberMe" style="width: auto; cursor: pointer;">
-        <label for="rememberMe" style="margin-bottom: 0; text-transform: none; font-weight: 500; font-size: 0.85rem; cursor: pointer;">Remember me</label>
-      </div>
-      <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Enter Workspace</button>
-    </form>
-  </div>
+
+      <form id="login-form" class="form-grid" novalidate>
+
+        <div class="field">
+          <label for="email">Email address</label>
+          <input id="email" name="email" type="email" required
+            placeholder="name@university.edu" autocomplete="email"/>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label for="password">Password</label>
+            <a href="forgot-password.html" class="forgot-link">Forgot password?</a>
+          </div>
+          <div class="pw-wrap">
+            <input id="password" name="password" type="password" required
+              placeholder="••••••••" autocomplete="current-password"/>
+            <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Toggle password visibility">
+              <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="check-row">
+          <input type="checkbox" id="rememberMe" name="rememberMe"/>
+          <label for="rememberMe">Keep me signed in</label>
+        </div>
+
+        <button type="submit" class="btn-submit" id="submit-btn">
+          <span class="btn-text" style="display:flex;align-items:center;gap:.5rem;">
+            Enter Workspace
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </span>
+          <div class="spinner"></div>
+        </button>
+
+      </form>
+
+      <p class="form-footer">
+        Don't have an account? <a href="register.html">Create one →</a>
+      </p>
+
+    </div>
+  </main>
+
 </div>
-<script type="module" src="assets/js/pages/login.js"></script>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
+  });
+  (function animRing() {
+    rx += (mx - rx) * 0.13; ry += (my - ry) * 0.13;
+    ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+    requestAnimationFrame(animRing);
+  })();
+  document.querySelectorAll('a, button, input').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.width = '18px'; cursor.style.height = '18px';
+      ring.style.width = '50px'; ring.style.height = '50px'; ring.style.opacity = '0.2';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.width = '10px'; cursor.style.height = '10px';
+      ring.style.width = '32px'; ring.style.height = '32px'; ring.style.opacity = '0.4';
+    });
+  });
+
+  // Password toggle
+  const pwInput = document.getElementById('password');
+  document.getElementById('pw-toggle').addEventListener('click', () => {
+    const show = pwInput.type === 'password';
+    pwInput.type = show ? 'text' : 'password';
+    document.getElementById('eye-icon').innerHTML = show
+      ? `<line x1="1" y1="1" x2="23" y2="23"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><path d="M1 1l22 22M1 12s4-8 11-8"/>`
+      : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+  });
+
+  // Demo row auto-fill
+  document.querySelectorAll('.demo-row[data-email]').forEach(row => {
+    row.addEventListener('click', () => {
+      const emailEl = document.getElementById('email');
+      const pwEl = document.getElementById('password');
+      emailEl.value = row.dataset.email;
+      pwEl.value = row.dataset.pw;
+      // Show password briefly
+      pwEl.type = 'text';
+      setTimeout(() => { pwEl.type = 'password'; }, 800);
+      // Brief focus flash
+      emailEl.focus();
+      emailEl.blur();
+      showFlash(`Filled as <strong>${row.dataset.email}</strong>`, 'success');
+    });
+  });
+
+  // Flash helper
+  function showFlash(msg, type = 'error') {
+    const c = document.getElementById('flash-container');
+    c.innerHTML = `<div class="flash flash-${type}">${msg}</div>`;
+    setTimeout(() => { c.innerHTML = ''; }, 3500);
+  }
+
+  // Form submit
+  document.getElementById('login-form').addEventListener('submit', e => {
+    const email = document.getElementById('email').value.trim();
+    const pw = document.getElementById('password').value;
+
+    if (!email || !pw) {
+      e.preventDefault();
+      showFlash('Please enter your email and password.', 'error'); return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.classList.add('loading');
+
+    // Remove this block if login.js handles submission
+    // Simulates async — replace with your actual auth call
+    e.preventDefault();
+    setTimeout(() => {
+      btn.classList.remove('loading');
+      showFlash('Signed in successfully! Redirecting…', 'success');
+      setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
+    }, 1400);
+  });
+</script>
+
+<!-- Re-enable when login.js is ready: -->
+<!-- <script type="module" src="assets/js/pages/login.js"></script> -->
 </body>
 </html>
