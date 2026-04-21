@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile — Taskly</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:          #0a1512;
+      --ink-soft:     #1c2e28;
+      --paper:        #f7faf8;
+      --teal:         #1a9e74;
+      --teal-dark:    #127a59;
+      --teal-light:   #d0f2e8;
+      --teal-mid:     #a8e6d0;
+      --teal-glow:    rgba(26,158,116,.15);
+      --blue:         #1478b0;
+      --blue-light:   #dceef9;
+      --mint:         #34d9a5;
+      --muted:        #607a72;
+      --muted-2:      #8ea89f;
+      --border:       #daeee6;
+      --border-2:     #c2ddd4;
+      --white:        #ffffff;
+      --red:          #c93535;
+      --red-light:    #fce8e8;
+      --sidebar-w:    220px;
+      --radius:       14px;
+      --radius-sm:    9px;
+      --radius-xs:    6px;
+      --shadow:       0 2px 16px rgba(26,158,116,.07);
+      --trans:        .18s cubic-bezier(.4,0,.2,1);
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Geist', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: var(--sidebar-w);
+      background: var(--ink);
+      display: flex; flex-direction: column;
+      z-index: 200;
+      overflow: hidden;
+    }
+
+    .sidebar::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(52,217,165,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(52,217,165,.035) 1px, transparent 1px);
+      background-size: 36px 36px;
+      pointer-events: none;
+    }
+
+    .sidebar::after {
+      content: '';
+      position: absolute;
+      width: 280px; height: 280px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(26,158,116,.1) 0%, transparent 65%);
+      bottom: -60px; right: -100px;
+      pointer-events: none;
+    }
+
+    .sidebar-inner {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      height: 100%;
+    }
+
+    .sidebar-logo {
+      display: flex; align-items: center; gap: 9px;
+      padding: 1.3rem 1.3rem .9rem;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      margin-bottom: .4rem;
+    }
+
+    .sidebar-logo-mark {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: var(--teal);
+      display: grid; place-items: center;
+      flex-shrink: 0;
+      transition: transform var(--trans);
+    }
+
+    .sidebar-logo:hover .sidebar-logo-mark { transform: rotate(-6deg) scale(1.07); }
+
+    .sidebar-logo-name {
+      font-family: 'Geist', sans-serif;
+      font-weight: 600; font-size: 1rem; color: #fff;
+      letter-spacing: -.01em;
+    }
+
+    .sidebar-logo-name span { color: var(--mint); }
+
+    .sidebar-section {
+      font-size: .62rem; font-weight: 600; letter-spacing: .1em;
+      text-transform: uppercase; color: rgba(255,255,255,.28);
+      padding: .75rem 1.3rem .25rem;
+    }
+
+    .sidebar-nav { flex: 1; overflow-y: auto; padding-bottom: 1rem; }
+
+    .sidebar-link {
+      display: flex; align-items: center; gap: .65rem;
+      padding: .55rem 1.3rem;
+      color: rgba(255,255,255,.48);
+      text-decoration: none; font-size: .84rem;
+      transition: all var(--trans); position: relative;
+      border-radius: 0;
+    }
+
+    .sidebar-link svg { width: 15px; height: 15px; flex-shrink: 0; }
+    .sidebar-link:hover { color: rgba(255,255,255,.85); background: rgba(255,255,255,.04); }
+
+    .sidebar-link.active {
+      color: #fff;
+      background: rgba(52,217,165,.11);
+    }
+
+    .sidebar-link.active::before {
+      content: '';
+      position: absolute; left: 0; top: 5px; bottom: 5px;
+      width: 2.5px; background: var(--mint); border-radius: 0 2px 2px 0;
+    }
+
+    .sidebar-footer {
+      padding: .9rem 1.3rem;
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
+
+    .sidebar-user {
+      display: flex; align-items: center; gap: .6rem;
+    }
+
+    .sidebar-avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--ink-soft);
+      border: 1.5px solid rgba(255,255,255,.14);
+      display: grid; place-items: center;
+      font-size: .68rem; font-weight: 700; color: var(--mint);
+      flex-shrink: 0; overflow: hidden;
+    }
+
+    .sidebar-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .sidebar-user-name { font-size: .8rem; font-weight: 500; color: #fff; }
+    .sidebar-user-role { font-size: .68rem; color: rgba(255,255,255,.38); }
+
+    /* ── LAYOUT ── */
+    .layout {
+      margin-left: var(--sidebar-w);
+      display: flex; flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: rgba(247,250,248,.94);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: .8rem 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+
+    .topbar-crumb {
+      display: flex; align-items: center; gap: .45rem;
+      font-size: .8rem; color: var(--muted-2);
+    }
+
+    .topbar-crumb strong { color: var(--ink); font-weight: 500; }
+    .topbar-crumb span { opacity: .5; }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+    }
+
+    .mobile-nav-toggle {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      background: var(--white);
+      color: var(--ink);
+      flex-shrink: 0;
+    }
+
+    .mobile-nav-toggle svg { width: 18px; height: 18px; }
+
+    .mobile-nav-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(10,21,18,.42);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--trans);
+      z-index: 180;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .52rem 1.1rem; border-radius: 50px;
+      font-family: 'Geist', sans-serif; font-weight: 500; font-size: .82rem;
+      cursor: pointer; text-decoration: none;
+      transition: background var(--trans), transform var(--trans),
+                  box-shadow var(--trans), color var(--trans), border-color var(--trans);
+      border: none;
+    }
+
+    .btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+    .btn-primary {
+      background: var(--teal); color: #fff;
+      box-shadow: 0 2px 10px rgba(26,158,116,.26);
+      position: relative; overflow: hidden;
+    }
+
+    .btn-primary::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.16) 50%, transparent 65%);
+      transform: translateX(-100%);
+    }
+
+    .btn-primary:hover {
+      background: var(--teal-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 5px 16px rgba(26,158,116,.35);
+    }
+
+    .btn-primary:hover::after {
+      transform: translateX(100%);
+      transition: transform .5s ease;
+    }
+
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      background: transparent; color: var(--muted);
+      border: 1.5px solid var(--border);
+    }
+
+    .btn-ghost:hover { border-color: var(--border-2); color: var(--ink); }
+
+    .btn-danger {
+      background: var(--red-light); color: var(--red);
+      border: 1.5px solid #f0bfbf;
+    }
+
+    .btn-danger:hover { background: var(--red); color: #fff; border-color: var(--red); }
+
+    /* ── PAGE ── */
+    .page {
+      padding: 2rem 2.5rem 4rem;
+      max-width: 1100px;
+    }
+
+    .page-header { margin-bottom: 2rem; }
+
+    .page-eyebrow {
+      font-size: .66rem; font-weight: 600; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--teal);
+      margin-bottom: .25rem;
+    }
+
+    .page-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 2rem; font-weight: 400;
+      letter-spacing: -.015em; line-height: 1.15;
+      margin-bottom: .25rem;
+    }
+
+    .page-sub { font-size: .84rem; color: var(--muted); }
+
+    /* ── GRID ── */
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 1rem 1.4rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .card-title {
+      font-family: 'Geist', sans-serif;
+      font-size: .84rem; font-weight: 600;
+      letter-spacing: -.005em;
+    }
+
+    .card-meta { font-size: .72rem; color: var(--muted-2); }
+
+    .card-body { padding: 1.4rem; }
+
+    /* ── PROFILE SUMMARY ── */
+    .avatar-section {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 2rem 1.4rem 1.4rem;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .avatar-ring {
+      position: relative;
+      width: 80px; height: 80px;
+      margin-bottom: 1rem;
+      cursor: pointer;
+    }
+
+    .avatar-ring::before {
+      content: '';
+      position: absolute; inset: -4px;
+      border-radius: 50%;
+      background: conic-gradient(var(--teal) 0%, var(--mint) 50%, var(--teal-mid) 100%);
+      animation: spin 8s linear infinite;
+      opacity: .6;
+    }
+
+    .avatar-ring::after {
+      content: '';
+      position: absolute; inset: -2px;
+      border-radius: 50%;
+      background: var(--white);
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .avatar-inner {
+      position: absolute; inset: 2px; z-index: 1;
+      border-radius: 50%;
+      background: var(--teal);
+      display: grid; place-items: center;
+      overflow: hidden;
+      transition: filter var(--trans);
+    }
+
+    .avatar-ring:hover .avatar-inner { filter: brightness(.75); }
+
+    .avatar-initials {
+      font-family: 'Geist', sans-serif;
+      font-size: 1.5rem; font-weight: 600; color: #fff;
+    }
+
+    .avatar-inner img {
+      width: 100%; height: 100%;
+      object-fit: cover; display: none;
+    }
+
+    .avatar-overlay {
+      position: absolute; inset: 2px; z-index: 2;
+      border-radius: 50%;
+      display: grid; place-items: center;
+      opacity: 0; transition: opacity var(--trans);
+    }
+
+    .avatar-ring:hover .avatar-overlay { opacity: 1; }
+    .avatar-overlay svg { width: 18px; height: 18px; color: #fff; }
+
+    .profile-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.2rem; font-weight: 400;
+      margin-bottom: .15rem;
+    }
+
+    .profile-email { font-size: .78rem; color: var(--muted); margin-bottom: .75rem; }
+
+    .role-badge {
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-size: .68rem; font-weight: 600;
+      padding: .2rem .6rem; border-radius: 50px;
+      background: var(--teal-light); color: var(--teal-dark);
+      letter-spacing: .03em;
+    }
+
+    .role-badge-dot {
+      width: 4px; height: 4px; border-radius: 50%;
+      background: var(--teal);
+    }
+
+    .profile-stats {
+      padding: 1rem 1.4rem;
+      display: flex; flex-direction: column; gap: .6rem;
+    }
+
+    .stat-row {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: .8rem;
+    }
+
+    .stat-label {
+      display: flex; align-items: center; gap: .4rem;
+      color: var(--muted);
+    }
+
+    .stat-label svg { width: 12px; height: 12px; }
+    .stat-value { font-weight: 500; color: var(--ink); }
+
+    /* ── GROUPS ── */
+    .groups-list { display: flex; flex-direction: column; gap: .4rem; }
+
+    .group-pill {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .55rem .8rem;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: border-color var(--trans), background var(--trans), transform var(--trans);
+      cursor: default;
+    }
+
+    .group-pill:hover {
+      border-color: var(--teal-mid);
+      background: var(--teal-light);
+      transform: translateX(2px);
+    }
+
+    .group-pill-left { display: flex; align-items: center; gap: .5rem; }
+
+    .group-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--teal); flex-shrink: 0;
+    }
+
+    .group-pill-name { font-size: .8rem; font-weight: 500; }
+
+    .group-badge {
+      font-size: .64rem; font-weight: 600;
+      padding: .12rem .45rem; border-radius: 50px;
+    }
+
+    .badge-leader { background: var(--teal-light); color: var(--teal-dark); }
+    .badge-member { background: var(--blue-light); color: var(--blue); }
+
+    /* ── FORM ── */
+    .form-grid { display: flex; flex-direction: column; gap: 1rem; }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+
+    .field { display: flex; flex-direction: column; gap: .28rem; }
+
+    .field label {
+      font-size: .66rem; font-weight: 600;
+      letter-spacing: .07em; text-transform: uppercase;
+      color: var(--muted-2);
+    }
+
+    .field input, .field select {
+      padding: .62rem .88rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'Geist', sans-serif; font-size: .875rem;
+      color: var(--ink); background: var(--paper);
+      transition: border-color var(--trans), background var(--trans),
+                  box-shadow var(--trans), transform var(--trans);
+      outline: none; width: 100%;
+    }
+
+    .field input:focus {
+      border-color: var(--teal);
+      background: var(--white);
+      box-shadow: 0 0 0 3px var(--teal-glow);
+      transform: translateY(-1px);
+    }
+
+    .field input:disabled {
+      opacity: .5; cursor: not-allowed;
+      background: rgba(0,0,0,.02);
+    }
+
+    .field input::placeholder { color: #afc4bc; }
+
+    .field-hint { font-size: .7rem; color: var(--muted-2); }
+
+    .form-divider {
+      height: 1px; background: var(--border);
+      margin: .2rem 0;
+    }
+
+    .form-actions {
+      display: flex; align-items: center; justify-content: flex-end;
+      gap: .6rem; flex-wrap: wrap;
+    }
+
+    /* ── DANGER ZONE ── */
+    .danger-zone {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem;
+      margin-top: 1.75rem;
+      padding: 1.1rem 1.4rem;
+      border: 1px solid #f0bfbf;
+      border-radius: var(--radius);
+      background: var(--red-light);
+    }
+
+    .danger-text strong {
+      display: block; font-size: .84rem; font-weight: 600;
+      color: var(--red); margin-bottom: .1rem;
+    }
+
+    .danger-text p { font-size: .76rem; color: #9a2f2f; }
+
+    /* ── FLASH ── */
+    .flash-stack { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+    .flash-stack:empty { display: none; }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-header  { opacity: 0; animation: fadeUp .45s .08s forwards; }
+    .left-col > *:nth-child(1) { opacity: 0; animation: fadeUp .45s .14s forwards; }
+    .left-col > *:nth-child(2) { opacity: 0; animation: fadeUp .45s .22s forwards; }
+    .right-col    { opacity: 0; animation: fadeUp .45s .18s forwards; }
+    .danger-zone  { opacity: 0; animation: fadeUp .45s .3s  forwards; }
+
+    /* sidebar entrance */
+    .sidebar-link {
+      opacity: 0;
+      animation: fadeIn .3s forwards;
+    }
+
+    .sidebar-link:nth-child(1) { animation-delay: .05s; }
+    .sidebar-link:nth-child(2) { animation-delay: .1s;  }
+    .sidebar-link:nth-child(3) { animation-delay: .15s; }
+    .sidebar-link:nth-child(4) { animation-delay: .2s;  }
+    .sidebar-link:nth-child(5) { animation-delay: .25s; }
+
+    /* form field stagger */
+    .form-grid > *:nth-child(1) { opacity: 0; animation: fadeUp .4s .25s forwards; }
+    .form-grid > *:nth-child(2) { opacity: 0; animation: fadeUp .4s .31s forwards; }
+    .form-grid > *:nth-child(3) { opacity: 0; animation: fadeUp .4s .37s forwards; }
+    .form-grid > *:nth-child(4) { opacity: 0; animation: fadeUp .4s .43s forwards; }
+    .form-grid > *:nth-child(5) { opacity: 0; animation: fadeUp .4s .49s forwards; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 960px) {
+      body.nav-open { overflow: hidden; }
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform var(--trans);
+      }
+      body.nav-open .sidebar { transform: translateX(0); }
+      body.nav-open .mobile-nav-backdrop {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .layout  { margin-left: 0; }
+      .profile-grid { grid-template-columns: 1fr; }
+      .field-row    { grid-template-columns: 1fr; }
+      .page { padding: 1.2rem 1rem 3rem; }
+      .topbar {
+        padding: .8rem 1rem;
+        gap: .75rem;
+      }
+      .topbar-actions { margin-left: auto; }
+      .mobile-nav-toggle { display: inline-flex; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-inner">
+    <a href="index.html" class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
+          <polyline points="4,10 8,14 16,6" stroke="#fff" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="sidebar-logo-name">Task<span>ly</span></span>
+    </a>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <a href="dashboard.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Dashboard
+      </a>
+      <a href="tasks.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11l3 3L22 4"/>
+          <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+        </svg>
+        Tasks
+      </a>
+      <a href="groups.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+          <path d="M16 3.13a4 4 0 010 7.75"/>
+        </svg>
+        Groups
+        <span class="sidebar-badge" style="margin-left:auto; background:var(--teal); color:#fff; font-size:.63rem; font-weight:700; padding:.1rem .42rem; border-radius:50px;">0</span>
+      </a>
+      <a href="feed.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Feed
+      </a>
+
+      <div class="sidebar-section">Account</div>
+      <a href="profile.html" class="sidebar-link active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        Profile
+      </a>
+      <a href="admin.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
+        </svg>
+        Admin
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">MU</div>
+        <div>
+          <div class="sidebar-user-name" id="sidebar-name">Muhammad AbdulKadir Saeed</div>
+          <div class="sidebar-user-role">Student Workspace</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div class="mobile-nav-backdrop" id="mobile-nav-backdrop"></div>
+
+<!-- MAIN LAYOUT -->
+<div class="layout">
+
+  <header class="topbar">
+    <div class="topbar-crumb">
+      <span>Taskly</span>
+      <span>/</span>
+      <strong>Profile</strong>
+    </div>
+    <div class="topbar-actions">
+      <button class="mobile-nav-toggle" id="mobile-nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="7" x2="20" y2="7"></line>
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+          <line x1="4" y1="17" x2="20" y2="17"></line>
+        </svg>
+      </button>
+      <a href="dashboard.html" class="btn btn-ghost" style="font-size:.8rem;padding:.46rem .95rem;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Dashboard
+      </a>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <div class="page-header">
+      <div class="page-eyebrow">Account</div>
+      <h1 class="page-title">Your profile</h1>
+      <p class="page-sub">Keep your details current and presentation-ready.</p>
+    </div>
+
+    <div id="flash-container" class="flash-stack"></div>
+
+    <div class="profile-grid">
+
+      <!-- LEFT COLUMN -->
+      <div class="left-col" style="display:flex;flex-direction:column;gap:1.25rem;">
+
+        <!-- Summary card -->
+        <div class="card" id="profile-summary">
+          <div class="avatar-section">
+            <div class="avatar-ring" id="avatar-ring">
+              <div class="avatar-inner">
+                <span class="avatar-initials" id="summary-initials">AL</span>
+                <img id="summary-avatar-img" src="" alt="Profile picture"/>
+              </div>
+              <div class="avatar-overlay">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="profile-name" id="summary-name">Ahmed L.</div>
+            <div class="profile-email" id="summary-email">ahmed@taskly.demo</div>
+            <span class="role-badge">
+              <span class="role-badge-dot"></span>
+              <span id="summary-role">Group leader</span>
+            </span>
+          </div>
+
+          <div class="profile-stats">
+            <div class="stat-row">
+              <span class="stat-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 010 7.75"/>
+                </svg>
+                Groups
+              </span>
+              <span class="stat-value" id="summary-groups-count">2</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 11l3 3L22 4"/>
+                  <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                </svg>
+                Tasks assigned
+              </span>
+              <span class="stat-value">8</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Member since
+              </span>
+              <span class="stat-value">Apr 2025</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Groups card -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Your groups</span>
+            <span class="card-meta" id="groups-count-label">2 groups</span>
+          </div>
+          <div class="card-body">
+            <div class="groups-list" id="profile-groups">
+              <div class="group-pill">
+                <div class="group-pill-left">
+                  <div class="group-dot"></div>
+                  <span class="group-pill-name">Frontend Dev Team</span>
+                </div>
+                <span class="group-badge badge-leader">Leader</span>
+              </div>
+              <div class="group-pill">
+                <div class="group-pill-left">
+                  <div class="group-dot" style="background:var(--blue);"></div>
+                  <span class="group-pill-name">UX Research Group</span>
+                </div>
+                <span class="group-badge badge-member">Member</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="right-col">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Update profile</span>
+            <span class="card-meta">Changes save immediately</span>
+          </div>
+          <div class="card-body">
+            <form id="profile-form" class="form-grid">
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="profile-name">Full name</label>
+                  <input id="profile-name" name="name" required placeholder="Your full name"/>
+                </div>
+                <div class="field">
+                  <label for="profile-email">Email address</label>
+                  <input id="profile-email" name="email" value="ahmed@taskly.demo" disabled/>
+                  <span class="field-hint">Email cannot be changed in demo mode.</span>
+                </div>
+              </div>
+
+              <div class="form-divider"></div>
+
+              <div class="field">
+                <label for="profile-picture">Profile picture URL</label>
+                <input id="profile-picture" name="profilePicture" type="url"
+                  placeholder="https://example.com/photo.jpg"/>
+                <span class="field-hint">Paste any public image URL to use as your avatar.</span>
+              </div>
+
+              <div class="field">
+                <label for="profile-upload">Or upload an image</label>
+                <input id="profile-upload" name="profileUpload" type="file" accept="image/*"/>
+              </div>
+
+              <div class="form-divider"></div>
+
+              <div class="form-actions">
+                <button type="button" class="btn btn-ghost" id="discard-btn">Discard</button>
+                <button type="submit" class="btn btn-primary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                  </svg>
+                  Save changes
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- DANGER ZONE -->
+    <div class="danger-zone">
+      <div class="danger-text">
+        <strong>Delete account</strong>
+        <p>Permanently remove your account and all associated data from this demo.</p>
+      </div>
+      <button class="btn btn-danger" type="button" id="delete-account-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/>
+          <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+        </svg>
+        Delete account
+      </button>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  document.title = "Profile - Taskly";
+
+  const mobileNavToggle = document.getElementById("mobile-nav-toggle");
+  const mobileNavBackdrop = document.getElementById("mobile-nav-backdrop");
+  const mobileNavLinks = document.querySelectorAll(".sidebar a");
+
+  function setMobileNav(open) {
+    document.body.classList.toggle("nav-open", open);
+    mobileNavToggle?.setAttribute("aria-expanded", String(open));
+  }
+
+  mobileNavToggle?.addEventListener("click", () => {
+    setMobileNav(!document.body.classList.contains("nav-open"));
+  });
+
+  mobileNavBackdrop?.addEventListener("click", () => setMobileNav(false));
+  mobileNavLinks.forEach((link) => link.addEventListener("click", () => setMobileNav(false)));
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setMobileNav(false);
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 960) setMobileNav(false);
+  });
+</script>
+<script type="module" src="assets/js/pages/profile.js"></script>
+</body>
+</html>

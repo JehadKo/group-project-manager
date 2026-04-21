@@ -1,0 +1,129 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Student Group Project Manager feed page for tracking personal tasks, group work, deadlines, and completed items."
+    />
+
+    <title>Feed | Student Group Project Manager</title>
+
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+
+  <body>
+    <header id="site-header"></header>
+
+    <div class="layout-app">
+      <aside id="site-sidebar"></aside>
+
+      <main class="page" aria-labelledby="page-title">
+        <section class="hero">
+          <p class="hero__eyebrow">Unified Feed</p>
+
+          <h1 id="page-title">
+            Review everything that needs your attention in one timeline
+          </h1>
+
+          <p class="hero__description">
+            Filter between personal work, group tasks, completed items, or
+            upcoming deadlines.
+          </p>
+        </section>
+
+        <div
+          id="flash-container"
+          class="flash-stack"
+          role="status"
+          aria-live="polite"
+        ></div>
+
+        <section class="panel" aria-labelledby="feed-section-title">
+          <div class="panel__header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 id="feed-section-title">Task Feed</h2>
+            <button class="btn-ghost" id="export-pdf-btn" type="button" style="min-height: auto; padding: 0.5rem 1rem;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export as Report
+            </button>
+          </div>
+
+          <div
+            class="filter-row"
+            id="feed-filters"
+            role="group"
+            aria-label="Filter feed items"
+          >
+            <button
+              class="btn-secondary is-active"
+              data-filter="activity"
+              type="button"
+              aria-pressed="true"
+            >
+              Activity Stream
+            </button>
+
+            <button
+              class="btn-ghost"
+              data-filter="all"
+              type="button"
+              aria-pressed="false"
+            >
+              All Tasks
+            </button>
+
+            <button
+              class="btn-ghost"
+              data-filter="personal"
+              type="button"
+              aria-pressed="false"
+            >
+              Personal
+            </button>
+
+            <button
+              class="btn-ghost"
+              data-filter="group"
+              type="button"
+              aria-pressed="false"
+            >
+              Group
+            </button>
+
+            <button
+              class="btn-ghost"
+              data-filter="dueSoon"
+              type="button"
+              aria-pressed="false"
+            >
+              Due Soon
+            </button>
+
+            <button
+              class="btn-ghost"
+              data-filter="completed"
+              type="button"
+              aria-pressed="false"
+            >
+              Completed
+            </button>
+          </div>
+
+          <div
+            id="feed-list"
+            class="list"
+            aria-live="polite"
+            aria-busy="false"
+          >
+            <p class="list__empty">No feed items available yet.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="assets/js/pages/feed.js"></script>
+  </body>
+</html>
+```
