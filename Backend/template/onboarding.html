@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to GPMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card text-center">
+                    <div class="card-header">
+                        <h2>Welcome to the Group Project Management System!</h2>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">You're not part of a group yet. You can either create a new one or join an existing group using an invite code.</p>
+
+                        <!-- Flash Messages -->
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+
+                        <div class="row mt-4">
+                            <!-- Create Group Form -->
+                            <div class="col-md-6">
+                                <h4>Create a New Group</h4>
+                                <form action="{{ url_for('create_group') }}" method="POST">
+                                    <div class="mb-3">
+                                        <input type="text" class="form-control" name="name" placeholder="Enter Group Name" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <input type="text" class="form-control" name="repo_url" placeholder="Optional: GitHub Repo URL">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Create Group</button>
+                                </form>
+                            </div>
+
+                            <!-- Join Group Form -->
+                            <div class="col-md-6">
+                                <h4>Join an Existing Group</h4>
+                                <form action="{{ url_for('join_group') }}" method="POST">
+                                    <div class="mb-3">
+                                        <input type="text" class="form-control" name="invite_code" placeholder="Enter 6-Digit Invite Code" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary">Join Group</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
