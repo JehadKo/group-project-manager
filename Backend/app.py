@@ -139,11 +139,11 @@ class AccountabilityEngine:
                 return 0, "No commits found for this user in the repository."
 
             net_loc = 0
-            task_title_lower = task_title.lower()
+            task_title_lower = task_title.lower().strip()
             
             # 2. Filter commits by task title and calculate net LOC
             for commit in all_commits:
-                commit_msg = commit.get('commit', {}).get('message', '').lower()
+                commit_msg = commit.get('commit', {}).get('message', '').lower().strip()
                 
                 # Check if the commit message contains the task title
                 if task_title_lower in commit_msg:
@@ -159,7 +159,7 @@ class AccountabilityEngine:
                         additions = stats.get('additions', 0)
                         deletions = stats.get('deletions', 0)
                         
-                        # Calculate net lines of code (can't be negative for the task progress)
+                        # Calculate net lines of code
                         net_loc += max(0, additions - deletions)
                     elif commit_resp.status_code in (403, 429):
                          return net_loc, "Rate limit hit while fetching individual commits. Partial data saved."
@@ -382,8 +382,6 @@ def sync_task(task_id):
              flash(f'GitHub Sync Warning: {error}', 'warning')
         else:
              flash(f'GitHub Sync Error: {error}', 'danger')
-             flash(f'GitHub Sync Error: {error}', 'danger')
-
              return redirect(url_for('dashboard'))
 
     # Update actual_loc with exact net LOC
@@ -406,4 +404,3 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True)
-
