@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPMS Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">GPMS Dashboard</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Group Info -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Group: {{ group.name }}</h3>
+            </div>
+            <div class="card-body">
+                <p><strong>Invite Code:</strong> <code>{{ group.invite_code }}</code></p>
+                <p><strong>Repo URL:</strong> <a href="{{ group.repo_url }}">{{ group.repo_url }}</a></p>
+                <h5>Team Members:</h5>
+                <ul>
+                    {% for member in team_members %}
+                        <li>{{ member.username }}</li>
+                    {% endfor %}
+                </ul>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: {{ group_completion_rate }}%;" aria-valuenow="{{ group_completion_rate }}" aria-valuemin="0" aria-valuemax="100">
+                        {{ "%.2f"|format(group_completion_rate|float) }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Creation Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Create New Task</h4>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('create_task') }}" method="POST">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <input type="text" class="form-control" name="title" placeholder="Task Title" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <select class="form-select" name="complexity_size" required>
+                                <option value="XS">XS</option>
+                                <option value="S">S</option>
+                                <option value="M">M</option>
+                                <option value="L">L</option>
+                                <option value="XL">XL</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <select class="form-select" name="assignee_id" required>
+                                {% for member in team_members %}
+                                    <option value="{{ member.id }}">{{ member.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <button type="submit" class="btn btn-primary w-100">Create</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Task Board -->
+        <h2>My Team's Tasks</h2>
+        <div class="row">
+            {% for task in tasks %}
+            <div class="col-md-4">
+                <div class="card text-white mb-3 {{ task.status_color }}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        {{ task.title }}
+                        <span class="badge bg-light text-dark">{{ task.assignee.username }}</span>
+                    </div>
+                    <div class="card-body">
+                        <p>Target: {{ task.target_loc }} LoC</p>
+                        <p>Actual: {{ task.actual_loc }} LoC</p>
+                    </div>
+                    <div class="card-footer">
+                        <form action="{{ url_for('sync_task', task_id=task.id) }}" method="POST" class="d-grid">
+                            <button type="submit" class="btn btn-sm btn-light">Sync Progress</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
