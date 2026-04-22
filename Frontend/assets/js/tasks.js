@@ -1,12 +1,11 @@
 import {
-  generateId,
-  getGroups,
-  getTasks,
-  getUsers,
-  saveProgressLogs,
-  saveTasks,
-  getProgressLogs,
-} from "./storage.js";
+  addTaskCommentWithApi,
+  createTaskWithApi,
+  deleteTaskWithApi,
+  updateTaskStatusWithApi,
+  updateTaskWithApi,
+} from "./api.js";
+import { getGroups, getProgressLogs, getTasks, getUsers, hydrateAppState } from "./storage.js";
 import { canCreateGroupTask, getGroupById } from "./groups.js";
 
 const VALID_STATUSES = ["Pending", "Ongoing", "Completed"];
@@ -30,7 +29,9 @@ function getUserVisibleTasks(user) {
       return true;
     }
 
-    if (task.isArchived) return false;
+    if (task.isArchived) {
+      return false;
+    }
 
     const group = groups.find((entry) => entry.id === task.groupId);
     return Boolean(group?.memberIds.includes(user.id));
@@ -94,24 +95,13 @@ function validateTaskInput(task, currentUser) {
   }
 }
 
-function createTask(input, currentUser) {
+async function createTask(input, currentUser) {
   const task = normalizeTaskInput(input);
   validateTaskInput(task, currentUser);
 
-  const newTask = {
-    id: generateId("task"),
-    ...task,
-    createdBy: currentUser.id,
-    createdAt: new Date().toISOString(),
-  };
-
-  if (newTask.isPersonal) {
-    newTask.assignedTo = currentUser.id;
-    newTask.groupId = null;
-  }
-
-  saveTasks([...getTasks(), newTask]);
-  return newTask;
+  const response = await createTaskWithApi(task);
+  hydrateAppState(response.state);
+  return getTasks()[0] ?? null;
 }
 
 function canEditTask(task, currentUser) {
@@ -131,7 +121,7 @@ function canEditTask(task, currentUser) {
   return Boolean(group && (group.leaderId === currentUser.id || task.createdBy === currentUser.id || canCreateGroupTask(currentUser, group)));
 }
 
-function updateTask(taskId, updates, currentUser) {
+async function updateTask(taskId, updates, currentUser) {
   const existingTask = getTaskById(taskId);
   if (!existingTask) {
     throw new Error("Task not found.");
@@ -147,11 +137,12 @@ function updateTask(taskId, updates, currentUser) {
   };
 
   validateTaskInput(nextTask, currentUser);
-  saveTasks(getTasks().map((task) => (task.id === taskId ? nextTask : task)));
-  return nextTask;
+  const response = await updateTaskWithApi(taskId, nextTask);
+  hydrateAppState(response.state);
+  return getTaskById(taskId);
 }
 
-function deleteTask(taskId, currentUser) {
+async function deleteTask(taskId, currentUser) {
   const existingTask = getTaskById(taskId);
   if (!existingTask) {
     throw new Error("Task not found.");
@@ -161,31 +152,22 @@ function deleteTask(taskId, currentUser) {
     throw new Error("You do not have permission to delete this task.");
   }
 
-  saveTasks(getTasks().filter((task) => task.id !== taskId));
+  const response = await deleteTaskWithApi(taskId);
+  hydrateAppState(response.state);
 }
 
 function archiveTask(taskId, currentUser) {
-  const existingTask = getTaskById(taskId);
-  if (!existingTask) {
-    throw new Error("Task not found.");
-  }
-
-  if (!canEditTask(existingTask, currentUser)) {
-    throw new Error("You do not have permission to archive this task.");
-  }
-
-  saveTasks(getTasks().map((t) => t.id === taskId ? { ...t, isArchived: true } : t));
+  return updateTask(taskId, { isArchived: true }, currentUser);
 }
 
-function addTaskComment(taskId, text, currentUser) {
+async function addTaskComment(taskId, text, currentUser) {
   const task = getTaskById(taskId);
   if (!task) {
     throw new Error("Task not found.");
   }
 
-  // Ensure user can see the task to comment on it
   const visibleTasks = getUserVisibleTasks(currentUser);
-  if (!visibleTasks.some((t) => t.id === taskId)) {
+  if (!visibleTasks.some((entry) => entry.id === taskId)) {
     throw new Error("You do not have permission to comment on this task.");
   }
 
@@ -194,21 +176,9 @@ function addTaskComment(taskId, text, currentUser) {
     throw new Error("Comment text cannot be empty.");
   }
 
-  const newComment = {
-    id: generateId("comment"),
-    userId: currentUser.id,
-    userName: currentUser.name,
-    text: commentText,
-    timestamp: new Date().toISOString(),
-  };
-
-  const updatedTask = {
-    ...task,
-    comments: [...(task.comments || []), newComment],
-  };
-
-  saveTasks(getTasks().map((t) => (t.id === taskId ? updatedTask : t)));
-  return newComment;
+  const response = await addTaskCommentWithApi(taskId, { text: commentText });
+  hydrateAppState(response.state);
+  return getTaskById(taskId)?.comments?.slice(-1)[0] ?? null;
 }
 
 function canUpdateTaskStatus(task, currentUser) {
@@ -232,7 +202,7 @@ function canUpdateTaskStatus(task, currentUser) {
   return task.assignedTo === currentUser.id || canEditTask(task, currentUser);
 }
 
-function updateTaskStatus(taskId, { status, progressNote }, currentUser) {
+async function updateTaskStatus(taskId, { status, progressNote }, currentUser) {
   if (!VALID_STATUSES.includes(status)) {
     throw new Error("Please choose a valid task status.");
   }
@@ -246,28 +216,13 @@ function updateTaskStatus(taskId, { status, progressNote }, currentUser) {
     throw new Error("You do not have permission to update this task.");
   }
 
-  const updatedTask = {
-    ...task,
+  const response = await updateTaskStatusWithApi(taskId, {
     status,
     progressNote: progressNote?.trim() ?? task.progressNote ?? "",
-  };
+  });
 
-  saveTasks(getTasks().map((entry) => (entry.id === taskId ? updatedTask : entry)));
-
-  const logs = [
-    ...getProgressLogs(),
-    {
-      id: generateId("log"),
-      taskId,
-      userId: currentUser.id,
-      note: updatedTask.progressNote,
-      status,
-      timestamp: new Date().toISOString(),
-    },
-  ];
-
-  saveProgressLogs(logs);
-  return updatedTask;
+  hydrateAppState(response.state);
+  return getTaskById(taskId);
 }
 
 function getTaskAssigneeName(task) {
@@ -294,9 +249,9 @@ function getTaskAssigneeRole(task) {
 export {
   VALID_STATUSES,
   addTaskComment,
+  archiveTask,
   canEditTask,
   canUpdateTaskStatus,
-  archiveTask,
   createTask,
   deleteTask,
   getGroupTasks,

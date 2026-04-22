@@ -4,7 +4,7 @@ import { downloadBackup, getSystemMetrics, removeUser, toggleUserActive } from "
 import { getUsers } from "../storage.js";
 import { escapeHtml, renderFlash, renderProgressMarkup } from "../ui.js";
 
-const user = bootstrapProtectedPage({ pageKey: "admin", roles: ["admin"] });
+const user = await bootstrapProtectedPage({ pageKey: "admin", roles: ["admin"] });
 
 if (user) {
   const metricsContainer = document.querySelector("#admin-metrics");
@@ -208,9 +208,9 @@ if (user) {
       .join("");
 
     usersBody.querySelectorAll("[data-action='toggle']").forEach((button) => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", async () => {
         try {
-          toggleUserActive(button.dataset.userId);
+          await toggleUserActive(button.dataset.userId);
           showInlineFlash("User status updated.", "success");
           renderMetrics();
           renderUsers();
@@ -221,9 +221,9 @@ if (user) {
     });
 
     usersBody.querySelectorAll("[data-action='remove']").forEach((button) => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", async () => {
         try {
-          removeUser(button.dataset.userId);
+          await removeUser(button.dataset.userId);
           showInlineFlash("User removed from the demo system.", "success");
           renderMetrics();
           renderUsers();

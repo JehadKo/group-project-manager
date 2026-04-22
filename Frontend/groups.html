@@ -1,51 +1,479 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Groups | Student Group Project Manager</title>
-    <link rel="stylesheet" href="assets/css/styles.css" />
-  </head>
-  <body>
-    <header id="site-header"></header>
-    <div class="layout-app">
-      <aside id="site-sidebar"></aside>
-      <main class="page">
-        <section class="hero">
-          <div class="hero__eyebrow">Group Management</div>
-          <h1>Build teams and control permissions clearly.</h1>
-          <p>Create a group, share an invite code, and manage who can contribute or help coordinate project work.</p>
-        </section>
-        <div id="flash-container" class="flash-stack"></div>
-        <section class="two-column">
-          <form id="create-group-form" class="panel">
-            <h2>Create a Group</h2>
-            <p class="muted">Any student can create a group and automatically become the leader.</p>
-            <div class="field">
-              <label for="groupName">Group Name</label>
-              <input id="groupName" name="groupName" required />
-            </div>
-            <button class="btn" type="submit" style="margin-top: 1rem;">Create Group</button>
-          </form>
-          <form id="join-group-form" class="panel">
-            <h2>Join with Invite Code</h2>
-            <p class="muted">Students can join an existing project group using the code shared by the leader.</p>
-            <div class="field">
-              <label for="inviteCode">Invite Code</label>
-              <input id="inviteCode" name="inviteCode" required />
-            </div>
-            <button class="btn-secondary" type="submit" style="margin-top: 1rem;">Join Group</button>
-          </form>
-        </section>
-        <section class="panel">
-          <div class="split">
-            <h2>Your Groups</h2>
-            <span class="helper">Leaders can update member roles from this page.</span>
-          </div>
-          <div id="groups-list" class="cards-grid" style="margin-top: 1rem;"></div>
-        </section>
-      </main>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Groups — Taskly</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    :root {
+      --ink: #0d0d0d; --paper: #f5f2ec; --cream: #ede9e0; --surface: #ffffff;
+      --accent: #c8502a; --accent-light: #e8724f; --accent-glow: rgba(200,80,42,0.12);
+      --gold: #c9a84c; --blue: #2563ba; --blue-light: #dbeafe;
+      --green: #1a7a4a; --green-light: #dcfce7; --red: #c0392b;
+      --muted: #7a7468; --muted-2: #a09890;
+      --border: rgba(13,13,13,0.08); --border-strong: rgba(13,13,13,0.14);
+      --sidebar-w: 240px; --font-display: 'Instrument Serif', Georgia, serif;
+      --font-body: 'DM Sans', sans-serif; --radius: 14px; --radius-sm: 9px;
+      --trans: 0.2s cubic-bezier(0.4,0,0.2,1);
+      --shadow-sm: 0 1px 4px rgba(13,13,13,0.06);
+      --shadow-md: 0 4px 18px rgba(13,13,13,0.08);
+      --shadow-lg: 0 12px 40px rgba(13,13,13,0.12);
+    }
+    body { font-family: var(--font-body); background: var(--paper); color: var(--ink); min-height: 100vh; cursor: none; }
+    .cursor { position:fixed;top:0;left:0;width:10px;height:10px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .22s,height .22s; }
+    .cursor-ring { position:fixed;top:0;left:0;width:30px;height:30px;border:1.5px solid var(--accent);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);opacity:.4; }
+    body::before { content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9000;opacity:.3; }
+
+    /* SIDEBAR */
+    .sidebar { position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--ink);display:flex;flex-direction:column;padding:1.5rem 1rem;z-index:100;overflow:hidden; }
+    .sidebar::before { content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(200,80,42,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(200,80,42,0.04) 1px,transparent 1px);background-size:32px 32px;pointer-events:none; }
+    .sidebar-orb { position:absolute;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(200,80,42,0.12) 0%,transparent 65%);bottom:-80px;right:-100px;pointer-events:none;animation:orbDrift 12s ease-in-out infinite alternate; }
+    @keyframes orbDrift { from{transform:translate(0,0) scale(1);}to{transform:translate(15px,-20px) scale(1.05);} }
+    .sidebar-inner { position:relative;z-index:1;display:flex;flex-direction:column;height:100%; }
+    .sidebar-logo { display:flex;align-items:center;gap:9px;text-decoration:none;margin-bottom:2rem;padding:0 0.25rem; }
+    .sidebar-logo-mark { width:32px;height:32px;border-radius:8px;background:var(--accent);display:grid;place-items:center;transition:transform var(--trans); }
+    .sidebar-logo:hover .sidebar-logo-mark { transform:rotate(-6deg) scale(1.06); }
+    .sidebar-logo-name { font-family:var(--font-display);font-size:1.3rem;color:white;letter-spacing:-0.01em; }
+    .sidebar-logo-name em { font-style:italic;color:var(--accent-light); }
+    .sidebar-section-label { font-size:0.6rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.22);padding:0 0.5rem;margin-bottom:0.4rem;margin-top:0.5rem; }
+    .nav-item { display:flex;align-items:center;gap:0.65rem;padding:0.6rem 0.7rem;border-radius:8px;text-decoration:none;font-size:0.84rem;font-weight:500;color:rgba(255,255,255,0.5);transition:background var(--trans),color var(--trans),transform var(--trans);margin-bottom:1px;position:relative; }
+    .nav-item svg { width:16px;height:16px;flex-shrink:0;opacity:0.7;transition:opacity var(--trans); }
+    .nav-item:hover { background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.88);transform:translateX(2px); }
+    .nav-item:hover svg { opacity:1; }
+    .nav-item.active { background:rgba(200,80,42,0.18);color:var(--accent-light); }
+    .nav-item.active svg { opacity:1;color:var(--accent-light); }
+    .nav-item.active::before { content:'';position:absolute;left:0;top:25%;bottom:25%;width:3px;background:var(--accent);border-radius:99px; }
+    .nav-badge { margin-left:auto;background:var(--accent);color:white;font-size:0.6rem;font-weight:700;padding:0.1rem 0.45rem;border-radius:99px; }
+    .sidebar-divider { height:1px;background:rgba(255,255,255,0.06);margin:0.75rem 0; }
+    .sidebar-user { margin-top:auto;padding:0.75rem;border-radius:var(--radius-sm);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:0.65rem; }
+    .user-av { width:32px;height:32px;border-radius:50%;background:var(--accent);display:grid;place-items:center;font-size:0.65rem;font-weight:700;color:white;flex-shrink:0; }
+    .user-name { font-size:0.82rem;font-weight:500;color:rgba(255,255,255,0.75); }
+    .user-role { font-size:0.68rem;color:rgba(255,255,255,0.28); }
+    .user-logout { margin-left:auto;color:rgba(255,255,255,0.25);cursor:pointer;transition:color var(--trans); }
+    .user-logout:hover { color:rgba(255,255,255,0.6); }
+
+    /* TOPBAR */
+    .topbar { position:fixed;top:0;left:var(--sidebar-w);right:0;height:56px;z-index:90;background:rgba(245,242,236,0.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 2rem; }
+    .topbar-left { display:flex;align-items:center;gap:0.5rem;font-size:0.78rem;color:var(--muted); }
+    .topbar-left span { color:var(--ink);font-weight:500; }
+    .topbar-sep { opacity:0.35; }
+    .topbar-right { display:flex;align-items:center;gap:0.75rem; }
+    .topbar-btn { width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);display:grid;place-items:center;cursor:pointer;transition:background var(--trans),border-color var(--trans),transform var(--trans); }
+    .topbar-btn:hover { background:var(--cream);border-color:var(--border-strong);transform:translateY(-1px); }
+    .topbar-btn svg { width:15px;height:15px;stroke:var(--muted); }
+    .topbar-date { font-size:0.78rem;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:0.3rem 0.75rem;border-radius:99px; }
+    .notif-dot { position:relative; }
+    .notif-dot::after { content:'';position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--accent);border:1.5px solid var(--paper); }
+
+    /* MAIN */
+    .main-content { margin-left:var(--sidebar-w);margin-top:56px;padding:2rem;min-height:calc(100vh - 56px); }
+
+    /* HERO */
+    .page-hero { background:var(--ink);border-radius:var(--radius);padding:2.5rem;margin-bottom:1.75rem;position:relative;overflow:hidden; }
+    .page-hero::before { content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(200,80,42,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(200,80,42,0.05) 1px,transparent 1px);background-size:40px 40px;pointer-events:none; }
+    .hero-orb { position:absolute;border-radius:50%;pointer-events:none; }
+    .hero-orb-1 { width:400px;height:400px;background:radial-gradient(circle,rgba(200,80,42,0.16) 0%,transparent 65%);top:-150px;right:-80px;animation:orbDrift 16s ease-in-out infinite alternate; }
+    .hero-orb-2 { width:200px;height:200px;background:radial-gradient(circle,rgba(201,168,76,0.1) 0%,transparent 70%);bottom:-60px;left:25%;animation:orbDrift 10s ease-in-out infinite alternate-reverse; }
+    .hero-inner { position:relative;z-index:1; }
+    .hero-eyebrow { font-size:0.68rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent-light);display:flex;align-items:center;gap:0.5rem;margin-bottom:0.65rem;opacity:0;animation:fadeUp 0.5s 0.1s forwards; }
+    .hero-eyebrow::before { content:'';width:18px;height:1px;background:var(--accent-light); }
+    .page-hero h1 { font-family:var(--font-display);font-size:2.4rem;line-height:1.1;letter-spacing:-0.02em;color:white;margin-bottom:0.5rem;opacity:0;animation:fadeUp 0.55s 0.18s forwards; }
+    .page-hero h1 em { font-style:italic;color:var(--accent-light); }
+    .page-hero p { font-size:0.88rem;color:rgba(255,255,255,0.45);line-height:1.7;max-width:500px;font-weight:300;opacity:0;animation:fadeUp 0.55s 0.26s forwards; }
+    .hero-chips { display:flex;gap:0.6rem;margin-top:1.5rem;flex-wrap:wrap;opacity:0;animation:fadeUp 0.5s 0.34s forwards; }
+    .hero-chip { display:flex;align-items:center;gap:0.45rem;font-size:0.72rem;font-weight:500;color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:99px;padding:0.3rem 0.75rem; }
+    .hero-chip-dot { width:6px;height:6px;border-radius:50%; }
+
+    /* SECTION HEAD */
+    .section-head { display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.1rem; }
+    .section-eyebrow { font-size:0.65rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:0.4rem;margin-bottom:0.25rem; }
+    .section-eyebrow::before { content:'';width:14px;height:1px;background:var(--accent); }
+    .section-title { font-family:var(--font-display);font-size:1.55rem;line-height:1.15;letter-spacing:-0.01em; }
+
+    /* FORMS ROW */
+    .forms-row { display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.75rem; }
+
+    /* PANEL */
+    .panel { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.6rem;opacity:0;animation:fadeUp 0.5s ease forwards; }
+    .panel-title { font-family:var(--font-display);font-size:1.2rem;letter-spacing:-0.01em;margin-bottom:0.3rem; }
+    .panel-sub { font-size:0.82rem;color:var(--muted);line-height:1.55;margin-bottom:1.4rem; }
+
+    /* FIELDS */
+    .field { display:flex;flex-direction:column;gap:0.3rem;margin-bottom:0.85rem; }
+    .field label { font-size:0.68rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted-2); }
+    .field input { padding:0.7rem 0.95rem;border:1.5px solid rgba(13,13,13,0.12);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:0.875rem;color:var(--ink);background:var(--paper);transition:border-color var(--trans),box-shadow var(--trans),transform var(--trans);outline:none;width:100%; }
+    .field input:hover { border-color:rgba(13,13,13,0.22); }
+    .field input:focus { border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3.5px var(--accent-glow);transform:translateY(-1px); }
+    .field input::placeholder { color:#bab4aa; }
+    .code-input { font-family:monospace;font-size:1rem !important;letter-spacing:0.18em;text-transform:uppercase;text-align:center; }
+
+    /* BUTTONS */
+    .btn-primary { width:100%;padding:0.78rem 1rem;background:var(--ink);color:var(--surface);border:none;border-radius:99px;font-family:var(--font-body);font-weight:600;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;box-shadow:0 4px 18px rgba(13,13,13,0.18);transition:background var(--trans),transform var(--trans),box-shadow var(--trans);position:relative;overflow:hidden; }
+    .btn-primary svg { width:15px;height:15px;transition:transform 0.25s; }
+    .btn-primary:hover { background:var(--accent);transform:translateY(-2px);box-shadow:0 8px 26px rgba(200,80,42,0.32); }
+    .btn-primary:hover svg { transform:translateX(3px); }
+    .btn-primary::after { content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,0.18) 50%,transparent 65%);transform:translateX(-100%); }
+    .btn-primary:hover::after { transform:translateX(100%);transition:transform 0.5s ease; }
+    .btn-secondary { width:100%;padding:0.78rem 1rem;background:transparent;color:var(--ink);border:1.5px solid var(--border-strong);border-radius:99px;font-family:var(--font-body);font-weight:600;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;transition:all var(--trans); }
+    .btn-secondary svg { width:15px;height:15px; }
+    .btn-secondary:hover { background:var(--cream);border-color:var(--accent);color:var(--accent);transform:translateY(-2px); }
+
+    /* FLASH */
+    #flash-container { margin-bottom:1.25rem; }
+    #flash-container:empty { display:none; }
+    .flash { padding:0.7rem 1rem;border-radius:var(--radius-sm);font-size:0.83rem;font-weight:500;border:1px solid;animation:fadeUp 0.3s ease;display:flex;align-items:center;gap:0.5rem; }
+    .flash-error { background:#fff2f0;border-color:#ffd3cc;color:#991414; }
+    .flash-success { background:#f0fdf6;border-color:#c6f0da;color:#166534; }
+
+    /* GROUPS GRID */
+    .groups-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:0.85rem; }
+
+    .group-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:transform var(--trans),box-shadow var(--trans),border-color var(--trans);opacity:0;animation:fadeUp 0.5s ease forwards; }
+    .group-card:hover { transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--border-strong); }
+
+    .group-card-top { padding:1.4rem;position:relative; }
+    .group-card-accent { position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius) var(--radius) 0 0; }
+    .group-card-header { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem; }
+    .group-avatar { width:44px;height:44px;border-radius:11px;display:grid;place-items:center;font-size:0.8rem;font-weight:700;color:white;flex-shrink:0; }
+    .group-role-badge { font-size:0.65rem;font-weight:700;padding:0.2rem 0.55rem;border-radius:99px;letter-spacing:0.04em;text-transform:uppercase; }
+    .role-leader { background:rgba(200,80,42,0.12);color:var(--accent); }
+    .role-member { background:rgba(37,99,186,0.1);color:var(--blue); }
+    .role-editor { background:rgba(201,168,76,0.15);color:#7a5c00; }
+    .group-name { font-family:var(--font-display);font-size:1.25rem;letter-spacing:-0.01em;margin-bottom:0.25rem; }
+    .group-desc { font-size:0.8rem;color:var(--muted);line-height:1.55; }
+    .group-card-stats { display:flex;gap:1.25rem;margin-top:1.1rem;padding-top:1rem;border-top:1px solid var(--border); }
+    .group-stat-num { font-family:var(--font-display);font-size:1.4rem;line-height:1;color:var(--ink); }
+    .group-stat-label { font-size:0.65rem;color:var(--muted-2);margin-top:0.15rem; }
+    .group-progress-wrap { padding:0 1.4rem 1rem; }
+    .progress-head { display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted-2);margin-bottom:0.35rem; }
+    .progress-bar { height:5px;background:rgba(13,13,13,0.06);border-radius:99px;overflow:hidden; }
+    .progress-fill { height:100%;border-radius:99px;transition:width 1s cubic-bezier(0.34,1.56,0.64,1); }
+    .group-card-footer { padding:1rem 1.4rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--paper); }
+    .group-members { display:flex;align-items:center; }
+    .member-pip { width:24px;height:24px;border-radius:50%;border:2px solid var(--surface);display:grid;place-items:center;font-size:0.55rem;font-weight:700;color:white;margin-left:-6px; }
+    .member-pip:first-child { margin-left:0; }
+    .member-count { font-size:0.74rem;color:var(--muted);margin-left:0.5rem; }
+    .group-actions { display:flex;gap:0.4rem; }
+    .group-btn { padding:0.3rem 0.75rem;border-radius:99px;font-size:0.74rem;font-weight:500;cursor:pointer;border:1px solid;transition:all var(--trans);text-decoration:none;display:inline-block;font-family:var(--font-body); }
+    .group-btn-primary { background:var(--ink);color:white;border-color:transparent; }
+    .group-btn-primary:hover { background:var(--accent); }
+    .group-btn-ghost { background:transparent;color:var(--muted);border-color:var(--border-strong); }
+    .group-btn-ghost:hover { border-color:var(--accent);color:var(--accent);background:var(--accent-glow); }
+
+    .invite-chip { display:inline-flex;align-items:center;gap:0.5rem;background:var(--paper);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.35rem 0.75rem;font-family:monospace;font-size:0.8rem;letter-spacing:0.12em;color:var(--muted);cursor:pointer;transition:background var(--trans),border-color var(--trans); }
+    .invite-chip:hover { background:var(--cream);border-color:var(--accent);color:var(--ink); }
+    .invite-chip svg { width:12px;height:12px;opacity:0.5; }
+
+    .empty-state { text-align:center;padding:4rem 2rem;grid-column:1/-1; }
+    .empty-icon { font-size:3rem;margin-bottom:1rem;opacity:0.35; }
+    .empty-title { font-family:var(--font-display);font-size:1.4rem;color:var(--muted);margin-bottom:0.5rem; }
+    .empty-sub { font-size:0.84rem;color:var(--muted-2); }
+
+    /* MODAL */
+    .modal-overlay { position:fixed;inset:0;background:rgba(13,13,13,0.45);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;animation:fadeIn 0.25s ease forwards; }
+    .modal { background:var(--surface);border-radius:var(--radius);padding:2rem;max-width:460px;width:calc(100% - 2rem);box-shadow:var(--shadow-lg);opacity:0;animation:fadeUp 0.3s 0.05s ease forwards;position:relative; }
+    .modal-close { position:absolute;top:1rem;right:1rem;width:32px;height:32px;border:none;background:var(--paper);border-radius:8px;cursor:pointer;display:grid;place-items:center;transition:background var(--trans); }
+    .modal-close:hover { background:var(--cream); }
+    .modal-title { font-family:var(--font-display);font-size:1.5rem;margin-bottom:0.25rem; }
+    .modal-sub { font-size:0.83rem;color:var(--muted);margin-bottom:1.4rem; }
+    .member-row { display:flex;align-items:center;gap:0.65rem;padding:0.6rem 0;border-bottom:1px solid var(--border); }
+    .member-row:last-child { border-bottom:none; }
+    .member-av { width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:0.62rem;font-weight:700;color:white;flex-shrink:0; }
+    .member-name { font-size:0.84rem;font-weight:500; }
+    .member-email { font-size:0.72rem;color:var(--muted-2); }
+    .role-select { padding:0.25rem 0.55rem;border-radius:var(--radius-sm);border:1px solid var(--border);font-family:var(--font-body);font-size:0.76rem;background:var(--paper);color:var(--ink);cursor:pointer;transition:border-color var(--trans); }
+    .role-select:focus { outline:none;border-color:var(--accent); }
+    .remove-btn { width:26px;height:26px;border:none;background:none;cursor:pointer;color:var(--muted-2);display:grid;place-items:center;border-radius:6px;transition:background var(--trans),color var(--trans); }
+    .remove-btn:hover { background:#ffe9e9;color:var(--red); }
+
+    @keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);} }
+
+    @media (max-width:900px) {
+      .sidebar{transform:translateX(-100%);} .main-content{margin-left:0;} .topbar{left:0;}
+      .forms-row{grid-template-columns:1fr;} .groups-grid{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-orb"></div>
+  <div class="sidebar-inner">
+    <a href="index.html" class="sidebar-logo">
+      <div class="sidebar-logo-mark"><svg width="15" height="15" viewBox="0 0 20 20" fill="none"><polyline points="4,10 8,14 16,6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <span class="sidebar-logo-name">Task<em>ly</em></span>
+    </a>
+    <div class="sidebar-section-label">Main</div>
+    <a href="dashboard.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+    <a href="tasks.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-2 10h10l-9 10 2-10H3Z"/></svg>Tasks<span class="nav-badge">5</span></a>
+    <a href="groups.html" class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Groups</a>
+    <a href="activity.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Activity</a>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section-label">Account</div>
+    <a href="profile.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Profile</a>
+    <a href="settings.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+    <a href="admin.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>Admin</a>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-user">
+      <div class="user-av">JD</div>
+      <div><div class="user-name">Jamie D.</div><div class="user-role">Leader</div></div>
+      <div class="user-logout"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
     </div>
-    <script type="module" src="assets/js/pages/groups.js"></script>
-  </body>
+  </div>
+</aside>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-left"><span>Taskly</span><span class="topbar-sep">/</span><span>Groups</span></div>
+  <div class="topbar-right">
+    <div class="topbar-date" id="topbar-date">—</div>
+    <div class="topbar-btn notif-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+    <div class="topbar-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main-content">
+  <section class="page-hero">
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+    <div class="hero-inner">
+      <div class="hero-eyebrow">Group Management</div>
+      <h1>Build teams, <em>own the outcome</em></h1>
+      <p>Create a group, share an invite code, and manage who can contribute or help coordinate project work.</p>
+      <div class="hero-chips">
+        <div class="hero-chip"><div class="hero-chip-dot" style="background:var(--accent-light)"></div>Create groups instantly</div>
+        <div class="hero-chip"><div class="hero-chip-dot" style="background:var(--gold)"></div>Share invite codes</div>
+        <div class="hero-chip"><div class="hero-chip-dot" style="background:#7ec4f8"></div>Manage roles &amp; permissions</div>
+      </div>
+    </div>
+  </section>
+
+  <div id="flash-container"></div>
+
+  <div class="section-head" style="opacity:0;animation:fadeUp 0.45s 0.1s forwards">
+    <div><div class="section-eyebrow">Get started</div><div class="section-title">Create or join a group</div></div>
+  </div>
+
+  <div class="forms-row">
+    <div class="panel" style="animation-delay:0.12s">
+      <div class="panel-title">Create a Group</div>
+      <div class="panel-sub">Any student can create a group and automatically become the leader.</div>
+      <form id="create-group-form">
+        <div class="field">
+          <label for="groupName">Group name</label>
+          <input id="groupName" name="groupName" required placeholder="e.g. Frontend Team"/>
+        </div>
+        <div class="field">
+          <label for="groupDesc">Description <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted-2)">(optional)</span></label>
+          <input id="groupDesc" name="groupDesc" placeholder="What's this group working on?"/>
+        </div>
+        <button class="btn-primary" type="submit">Create Group<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      </form>
+    </div>
+    <div class="panel" style="animation-delay:0.2s">
+      <div class="panel-title">Join with Invite Code</div>
+      <div class="panel-sub">Students can join an existing project group using the code shared by the leader.</div>
+      <form id="join-group-form">
+        <div class="field">
+          <label for="inviteCode">Invite code</label>
+          <input id="inviteCode" name="inviteCode" required placeholder="e.g. FE-4821" class="code-input" maxlength="8"/>
+        </div>
+        <div style="height:73px"></div>
+        <button class="btn-secondary" type="submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Join Group</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="section-head" style="opacity:0;animation:fadeUp 0.45s 0.22s forwards">
+    <div><div class="section-eyebrow">Your groups</div><div class="section-title">All active groups</div></div>
+    <span style="font-size:0.78rem;color:var(--muted)">Leaders can manage roles here</span>
+  </div>
+  <div class="groups-grid" id="groups-list"></div>
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" style="display:none">
+  <div class="modal">
+    <button class="modal-close" id="modal-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    <div class="modal-title" id="modal-title">Manage Members</div>
+    <div class="modal-sub" id="modal-sub">Update roles or remove members from this group.</div>
+    <div id="modal-members"></div>
+  </div>
+</div>
+
+<script>
+  /* cursor */
+  const cur=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';});
+  (function loop(){rx+=(mx-rx)*0.13;ry+=(my-ry)*0.13;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
+  function addHover(el){el.addEventListener('mouseenter',()=>{cur.style.width='17px';cur.style.height='17px';ring.style.width='46px';ring.style.height='46px';ring.style.opacity='.2';});el.addEventListener('mouseleave',()=>{cur.style.width='10px';cur.style.height='10px';ring.style.width='30px';ring.style.height='30px';ring.style.opacity='.4';});}
+  document.querySelectorAll('a,button,input,.nav-item').forEach(addHover);
+
+  document.getElementById('topbar-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+  function flash(msg,type='success'){const c=document.getElementById('flash-container');c.innerHTML=`<div class="flash flash-${type}"><span>${type==='success'?'✓':'✕'}</span>${msg}</div>`;setTimeout(()=>{c.innerHTML='';},4000);}
+
+  const COLORS=['#c8502a','#2563ba','#c9a84c','#1a7a4a','#7c3aed'];
+  let groups=[
+    {id:1,name:'Frontend Team',desc:'Building the UI components and design system.',role:'leader',progress:72,tasks:10,done:7,code:'FE-4821',members:[{name:'Jamie D.',email:'jamie@uni.edu',color:'#c8502a',role:'leader'},{name:'Sara M.',email:'sara@uni.edu',color:'#2563ba',role:'editor'},{name:'Ali R.',email:'ali@uni.edu',color:'#1a7a4a',role:'member'}],color:'#c8502a'},
+    {id:2,name:'Backend Squad',desc:'API development, auth, and database architecture.',role:'member',progress:45,tasks:8,done:4,code:'BE-7310',members:[{name:'Lena K.',email:'lena@uni.edu',color:'#7c3aed',role:'leader'},{name:'Jamie D.',email:'jamie@uni.edu',color:'#c8502a',role:'member'}],color:'#2563ba'},
+    {id:3,name:'Design Circle',desc:'Brand identity, Figma prototyping, and visual QA.',role:'editor',progress:88,tasks:6,done:5,code:'DS-2290',members:[{name:'Mia T.',email:'mia@uni.edu',color:'#c9a84c',role:'leader'},{name:'Jamie D.',email:'jamie@uni.edu',color:'#c8502a',role:'editor'},{name:'Omar B.',email:'omar@uni.edu',color:'#1a7a4a',role:'member'}],color:'#c9a84c'},
+    {id:4,name:'QA & Testing',desc:'End-to-end testing, bug tracking, and release QA.',role:'member',progress:30,tasks:5,done:2,code:'QA-5512',members:[{name:'Jamie D.',email:'jamie@uni.edu',color:'#c8502a',role:'member'},{name:'Noor S.',email:'noor@uni.edu',color:'#2563ba',role:'leader'}],color:'#1a7a4a'},
+  ];
+
+  function initials(n){return n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+
+  function renderGroups(){
+    const list=document.getElementById('groups-list');
+    list.innerHTML='';
+    if(!groups.length){
+      list.innerHTML=`<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No groups yet</div><div class="empty-sub">Create your first group or join one with an invite code.</div></div>`;
+      return;
+    }
+    groups.forEach((g,i)=>{
+      const card=document.createElement('div');
+      card.className='group-card';
+      card.style.animationDelay=(0.06+i*0.07)+'s';
+      const roleCls=g.role==='leader'?'role-leader':g.role==='editor'?'role-editor':'role-member';
+      const pips=g.members.slice(0,3).map(m=>`<div class="member-pip" style="background:${m.color}">${initials(m.name)}</div>`).join('');
+      const extra=g.members.length>3?`<div class="member-pip" style="background:var(--muted-2)">+${g.members.length-3}</div>`:'';
+      card.innerHTML=`
+        <div class="group-card-top">
+          <div class="group-card-accent" style="background:${g.color}"></div>
+          <div class="group-card-header">
+            <div class="group-avatar" style="background:${g.color}">${initials(g.name)}</div>
+            <span class="group-role-badge ${roleCls}">${g.role.charAt(0).toUpperCase()+g.role.slice(1)}</span>
+          </div>
+          <div class="group-name">${g.name}</div>
+          <div class="group-desc">${g.desc}</div>
+          <div class="group-card-stats">
+            <div><div class="group-stat-num">${g.tasks}</div><div class="group-stat-label">Tasks</div></div>
+            <div><div class="group-stat-num">${g.done}</div><div class="group-stat-label">Done</div></div>
+            <div><div class="group-stat-num">${g.members.length}</div><div class="group-stat-label">Members</div></div>
+          </div>
+        </div>
+        <div class="group-progress-wrap">
+          <div class="progress-head"><span>Progress</span><span>${g.progress}%</span></div>
+          <div class="progress-bar"><div class="progress-fill" data-w="${g.progress}" style="background:${g.color};width:0%"></div></div>
+        </div>
+        <div class="group-card-footer">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div class="group-members">${pips}${extra}</div>
+            <div class="invite-chip" data-code="${g.code}" title="Copy invite code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              ${g.code}
+            </div>
+          </div>
+          <div class="group-actions">
+            ${g.role==='leader'?`<button class="group-btn group-btn-ghost manage-btn" data-id="${g.id}">Members</button>`:''}
+            <a href="tasks.html?group=${g.id}" class="group-btn group-btn-primary">Tasks →</a>
+          </div>
+        </div>`;
+      list.appendChild(card);
+    });
+
+    requestAnimationFrame(()=>{
+      document.querySelectorAll('.progress-fill[data-w]').forEach(el=>{
+        setTimeout(()=>{el.style.width=el.dataset.w+'%';},300);
+      });
+    });
+
+    document.querySelectorAll('.invite-chip').forEach(chip=>{
+      addHover(chip);
+      chip.addEventListener('click',()=>{
+        navigator.clipboard?.writeText(chip.dataset.code).catch(()=>{});
+        flash(`Invite code <strong>${chip.dataset.code}</strong> copied to clipboard!`);
+      });
+    });
+    document.querySelectorAll('.manage-btn').forEach(btn=>{
+      addHover(btn);
+      btn.addEventListener('click',()=>{
+        const g=groups.find(x=>x.id===+btn.dataset.id);
+        if(g) openModal(g);
+      });
+    });
+    document.querySelectorAll('.group-btn,.group-card').forEach(addHover);
+  }
+
+  function openModal(group){
+    const modal=document.getElementById('modal');
+    document.getElementById('modal-title').textContent=group.name+' — Members';
+    document.getElementById('modal-sub').textContent=`${group.members.length} member${group.members.length!==1?'s':''}. Update roles or remove members below.`;
+    const membersEl=document.getElementById('modal-members');
+    membersEl.innerHTML='';
+    group.members.forEach((m,idx)=>{
+      const row=document.createElement('div');
+      row.className='member-row';
+      row.innerHTML=`
+        <div class="member-av" style="background:${m.color}">${initials(m.name)}</div>
+        <div style="flex:1;min-width:0"><div class="member-name">${m.name}</div><div class="member-email">${m.email}</div></div>
+        <select class="role-select" data-idx="${idx}">
+          <option ${m.role==='leader'?'selected':''}>leader</option>
+          <option ${m.role==='editor'?'selected':''}>editor</option>
+          <option ${m.role==='member'?'selected':''}>member</option>
+        </select>
+        <button class="remove-btn" data-idx="${idx}" title="Remove">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>`;
+      membersEl.appendChild(row);
+    });
+    membersEl.querySelectorAll('.role-select').forEach(sel=>{
+      sel.addEventListener('change',()=>{
+        group.members[+sel.dataset.idx].role=sel.value;
+        if(group.members[+sel.dataset.idx].name==='Jamie D.'){group.role=sel.value;renderGroups();}
+        flash('Role updated successfully.');
+      });
+    });
+    membersEl.querySelectorAll('.remove-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const removed=group.members.splice(+btn.dataset.idx,1)[0];
+        openModal(group);renderGroups();
+        flash(`${removed.name} removed from the group.`);
+      });
+    });
+    modal.style.display='flex';
+  }
+
+  document.getElementById('modal-close').addEventListener('click',()=>{document.getElementById('modal').style.display='none';});
+  document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.style.display='none';});
+
+  document.getElementById('create-group-form').addEventListener('submit',e=>{
+    e.preventDefault();
+    const name=document.getElementById('groupName').value.trim();
+    const desc=document.getElementById('groupDesc').value.trim();
+    if(!name){flash('Please enter a group name.','error');return;}
+    const code=name.slice(0,2).toUpperCase()+'-'+Math.floor(1000+Math.random()*9000);
+    groups.unshift({id:Date.now(),name,desc:desc||'No description provided.',role:'leader',progress:0,tasks:0,done:0,code,members:[{name:'Jamie D.',email:'jamie@uni.edu',color:COLORS[groups.length%COLORS.length],role:'leader'}],color:COLORS[groups.length%COLORS.length]});
+    renderGroups();e.target.reset();
+    flash(`Group <strong>${name}</strong> created! Invite code: <strong>${code}</strong>`);
+  });
+
+  document.getElementById('join-group-form').addEventListener('submit',e=>{
+    e.preventDefault();
+    const code=document.getElementById('inviteCode').value.trim().toUpperCase();
+    if(!code){flash('Please enter an invite code.','error');return;}
+    const found=groups.find(g=>g.code===code);
+    if(!found){flash(`No group found with code <strong>${code}</strong>.`,'error');return;}
+    if(found.members.find(m=>m.name==='Jamie D.')){flash('You are already a member of this group.','error');return;}
+    found.members.push({name:'Jamie D.',email:'jamie@uni.edu',color:'#c8502a',role:'member'});
+    found.role='member';renderGroups();e.target.reset();
+    flash(`Joined <strong>${found.name}</strong> successfully!`);
+  });
+
+  renderGroups();
+</script>
+<script type="module" src="assets/js/pages/groups.js" onerror="void 0"></script>
+</body>
 </html>

@@ -1,0 +1,101 @@
+import sqlite3
+import os
+
+DB_PATH = os.path.join(os.path.dirname(__file__), 'taskly.db')
+
+def init_db():
+    """Initializes the SQLite database and seeds it with demo data."""
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Create Users Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            email TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            password TEXT NOT NULL,
+            globalRole TEXT DEFAULT 'student',
+            isActive BOOLEAN DEFAULT 1,
+            profilePicture TEXT,
+            githubUsername TEXT
+        )
+    ''')
+
+    # Create Groups Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS groups (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            inviteCode TEXT UNIQUE NOT NULL,
+            leaderId TEXT,
+            FOREIGN KEY (leaderId) REFERENCES users (id)
+        )
+    ''')
+
+    # Create Group Members Table (Many-to-Many relationship)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS group_members (
+            groupId TEXT,
+            userId TEXT,
+            role TEXT,
+            PRIMARY KEY (groupId, userId),
+            FOREIGN KEY (groupId) REFERENCES groups (id),
+            FOREIGN KEY (userId) REFERENCES users (id)
+        )
+    ''')
+
+    # Create Tasks Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tasks (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT,
+            deadline TEXT,
+            category TEXT,
+            status TEXT DEFAULT 'pending',
+            taskType TEXT DEFAULT 'group',
+            groupId TEXT,
+            assignedTo TEXT,
+            createdBy TEXT,
+            FOREIGN KEY (groupId) REFERENCES groups (id),
+            FOREIGN KEY (assignedTo) REFERENCES users (id),
+            FOREIGN KEY (createdBy) REFERENCES users (id)
+        )
+    ''')
+
+    # Create Progress Logs Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS progress_logs (
+            id TEXT PRIMARY KEY,
+            taskId TEXT,
+            userId TEXT,
+            note TEXT,
+            statusAtLog TEXT,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (taskId) REFERENCES tasks (id),
+            FOREIGN KEY (userId) REFERENCES users (id)
+        )
+    ''')
+
+    # Seed initial demo data matching the application defaults in app.py
+    demo_users = [
+        ("id-admin-001", "admin@demo.com", "Admin User", "admin123", "admin", 1, "", ""),
+        ("id-leader-001", "leader@demo.com", "Group Leader", "leader123", "student", 1, "", ""),
+        ("id-student-001", "saeedmuhammadabdulkadir@gmail.com", "Saeed", "student123", "student", 1, "", ")
+    ]
+
+    cursor.executemany('''
+        INSERT OR IGNORE INTO users (id, email, name, password, globalRole, isActive, profilePicture, githubUsername)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', demo_users)
+
+    conn.commit()
+    conn.close()
+    print(f"Database initialized successfully at: {DB_PATH}")
+
+if __name__ == '__main__':
+    init_db()

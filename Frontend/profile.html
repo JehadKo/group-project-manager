@@ -4,923 +4,660 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Profile — Taskly</title>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
 
     :root {
-      --ink:          #0a1512;
-      --ink-soft:     #1c2e28;
-      --paper:        #f7faf8;
-      --teal:         #1a9e74;
-      --teal-dark:    #127a59;
-      --teal-light:   #d0f2e8;
-      --teal-mid:     #a8e6d0;
-      --teal-glow:    rgba(26,158,116,.15);
-      --blue:         #1478b0;
-      --blue-light:   #dceef9;
-      --mint:         #34d9a5;
-      --muted:        #607a72;
-      --muted-2:      #8ea89f;
-      --border:       #daeee6;
-      --border-2:     #c2ddd4;
-      --white:        #ffffff;
-      --red:          #c93535;
-      --red-light:    #fce8e8;
-      --sidebar-w:    220px;
-      --radius:       14px;
-      --radius-sm:    9px;
-      --radius-xs:    6px;
-      --shadow:       0 2px 16px rgba(26,158,116,.07);
-      --trans:        .18s cubic-bezier(.4,0,.2,1);
-    }
-
-    html, body { height: 100%; }
-
-    body {
-      font-family: 'Geist', sans-serif;
-      background: var(--paper);
-      color: var(--ink);
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    /* ── SIDEBAR ── */
-    .sidebar {
-      position: fixed; top: 0; left: 0; bottom: 0;
-      width: var(--sidebar-w);
-      background: var(--ink);
-      display: flex; flex-direction: column;
-      z-index: 200;
-      overflow: hidden;
-    }
-
-    .sidebar::before {
-      content: '';
-      position: absolute; inset: 0;
-      background-image:
-        linear-gradient(rgba(52,217,165,.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(52,217,165,.035) 1px, transparent 1px);
-      background-size: 36px 36px;
-      pointer-events: none;
-    }
-
-    .sidebar::after {
-      content: '';
-      position: absolute;
-      width: 280px; height: 280px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(26,158,116,.1) 0%, transparent 65%);
-      bottom: -60px; right: -100px;
-      pointer-events: none;
-    }
-
-    .sidebar-inner {
-      position: relative; z-index: 1;
-      display: flex; flex-direction: column;
-      height: 100%;
-    }
-
-    .sidebar-logo {
-      display: flex; align-items: center; gap: 9px;
-      padding: 1.3rem 1.3rem .9rem;
-      text-decoration: none;
-      border-bottom: 1px solid rgba(255,255,255,.06);
-      margin-bottom: .4rem;
-    }
-
-    .sidebar-logo-mark {
-      width: 30px; height: 30px; border-radius: 8px;
-      background: var(--teal);
-      display: grid; place-items: center;
-      flex-shrink: 0;
-      transition: transform var(--trans);
-    }
-
-    .sidebar-logo:hover .sidebar-logo-mark { transform: rotate(-6deg) scale(1.07); }
-
-    .sidebar-logo-name {
-      font-family: 'Geist', sans-serif;
-      font-weight: 600; font-size: 1rem; color: #fff;
-      letter-spacing: -.01em;
-    }
-
-    .sidebar-logo-name span { color: var(--mint); }
-
-    .sidebar-section {
-      font-size: .62rem; font-weight: 600; letter-spacing: .1em;
-      text-transform: uppercase; color: rgba(255,255,255,.28);
-      padding: .75rem 1.3rem .25rem;
-    }
-
-    .sidebar-nav { flex: 1; overflow-y: auto; padding-bottom: 1rem; }
-
-    .sidebar-link {
-      display: flex; align-items: center; gap: .65rem;
-      padding: .55rem 1.3rem;
-      color: rgba(255,255,255,.48);
-      text-decoration: none; font-size: .84rem;
-      transition: all var(--trans); position: relative;
-      border-radius: 0;
-    }
-
-    .sidebar-link svg { width: 15px; height: 15px; flex-shrink: 0; }
-    .sidebar-link:hover { color: rgba(255,255,255,.85); background: rgba(255,255,255,.04); }
-
-    .sidebar-link.active {
-      color: #fff;
-      background: rgba(52,217,165,.11);
-    }
-
-    .sidebar-link.active::before {
-      content: '';
-      position: absolute; left: 0; top: 5px; bottom: 5px;
-      width: 2.5px; background: var(--mint); border-radius: 0 2px 2px 0;
-    }
-
-    .sidebar-footer {
-      padding: .9rem 1.3rem;
-      border-top: 1px solid rgba(255,255,255,.06);
-    }
-
-    .sidebar-user {
-      display: flex; align-items: center; gap: .6rem;
-    }
-
-    .sidebar-avatar {
-      width: 30px; height: 30px; border-radius: 50%;
-      background: var(--ink-soft);
-      border: 1.5px solid rgba(255,255,255,.14);
-      display: grid; place-items: center;
-      font-size: .68rem; font-weight: 700; color: var(--mint);
-      flex-shrink: 0; overflow: hidden;
-    }
-
-    .sidebar-avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .sidebar-user-name { font-size: .8rem; font-weight: 500; color: #fff; }
-    .sidebar-user-role { font-size: .68rem; color: rgba(255,255,255,.38); }
-
-    /* ── LAYOUT ── */
-    .layout {
-      margin-left: var(--sidebar-w);
-      display: flex; flex-direction: column;
-      min-height: 100vh;
-    }
-
-    /* ── TOPBAR ── */
-    .topbar {
-      background: rgba(247,250,248,.94);
-      backdrop-filter: blur(14px);
-      border-bottom: 1px solid var(--border);
-      padding: .8rem 2rem;
-      display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 100;
-    }
-
-    .topbar-crumb {
-      display: flex; align-items: center; gap: .45rem;
-      font-size: .8rem; color: var(--muted-2);
-    }
-
-    .topbar-crumb strong { color: var(--ink); font-weight: 500; }
-    .topbar-crumb span { opacity: .5; }
-
-    .topbar-actions {
-      display: flex;
-      align-items: center;
-      gap: .65rem;
-    }
-
-    .mobile-nav-toggle {
-      display: none;
-      align-items: center;
-      justify-content: center;
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      border: 1.5px solid var(--border);
-      background: var(--white);
-      color: var(--ink);
-      flex-shrink: 0;
-    }
-
-    .mobile-nav-toggle svg { width: 18px; height: 18px; }
-
-    .mobile-nav-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(10,21,18,.42);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity var(--trans);
-      z-index: 180;
-    }
-
-    /* ── BUTTONS ── */
-    .btn {
-      display: inline-flex; align-items: center; gap: .4rem;
-      padding: .52rem 1.1rem; border-radius: 50px;
-      font-family: 'Geist', sans-serif; font-weight: 500; font-size: .82rem;
-      cursor: pointer; text-decoration: none;
-      transition: background var(--trans), transform var(--trans),
-                  box-shadow var(--trans), color var(--trans), border-color var(--trans);
-      border: none;
-    }
-
-    .btn svg { width: 13px; height: 13px; flex-shrink: 0; }
-
-    .btn-primary {
-      background: var(--teal); color: #fff;
-      box-shadow: 0 2px 10px rgba(26,158,116,.26);
-      position: relative; overflow: hidden;
-    }
-
-    .btn-primary::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.16) 50%, transparent 65%);
-      transform: translateX(-100%);
-    }
-
-    .btn-primary:hover {
-      background: var(--teal-dark);
-      transform: translateY(-1px);
-      box-shadow: 0 5px 16px rgba(26,158,116,.35);
-    }
-
-    .btn-primary:hover::after {
-      transform: translateX(100%);
-      transition: transform .5s ease;
-    }
-
-    .btn-primary:active { transform: translateY(0); }
-
-    .btn-ghost {
-      background: transparent; color: var(--muted);
-      border: 1.5px solid var(--border);
-    }
-
-    .btn-ghost:hover { border-color: var(--border-2); color: var(--ink); }
-
-    .btn-danger {
-      background: var(--red-light); color: var(--red);
-      border: 1.5px solid #f0bfbf;
-    }
-
-    .btn-danger:hover { background: var(--red); color: #fff; border-color: var(--red); }
-
-    /* ── PAGE ── */
-    .page {
-      padding: 2rem 2.5rem 4rem;
-      max-width: 1100px;
-    }
-
-    .page-header { margin-bottom: 2rem; }
-
-    .page-eyebrow {
-      font-size: .66rem; font-weight: 600; letter-spacing: .1em;
-      text-transform: uppercase; color: var(--teal);
-      margin-bottom: .25rem;
-    }
-
-    .page-title {
-      font-family: 'Instrument Serif', serif;
-      font-size: 2rem; font-weight: 400;
-      letter-spacing: -.015em; line-height: 1.15;
-      margin-bottom: .25rem;
-    }
-
-    .page-sub { font-size: .84rem; color: var(--muted); }
-
-    /* ── GRID ── */
-    .profile-grid {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 1.5rem;
-      align-items: start;
-    }
-
-    /* ── CARDS ── */
-    .card {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .card-header {
-      padding: 1rem 1.4rem;
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-    }
-
-    .card-title {
-      font-family: 'Geist', sans-serif;
-      font-size: .84rem; font-weight: 600;
-      letter-spacing: -.005em;
-    }
-
-    .card-meta { font-size: .72rem; color: var(--muted-2); }
-
-    .card-body { padding: 1.4rem; }
-
-    /* ── PROFILE SUMMARY ── */
-    .avatar-section {
-      display: flex; flex-direction: column; align-items: center;
-      padding: 2rem 1.4rem 1.4rem;
-      border-bottom: 1px solid var(--border);
-      text-align: center;
-    }
-
-    .avatar-ring {
-      position: relative;
-      width: 80px; height: 80px;
-      margin-bottom: 1rem;
-      cursor: pointer;
-    }
-
-    .avatar-ring::before {
-      content: '';
-      position: absolute; inset: -4px;
-      border-radius: 50%;
-      background: conic-gradient(var(--teal) 0%, var(--mint) 50%, var(--teal-mid) 100%);
-      animation: spin 8s linear infinite;
-      opacity: .6;
-    }
-
-    .avatar-ring::after {
-      content: '';
-      position: absolute; inset: -2px;
-      border-radius: 50%;
-      background: var(--white);
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .avatar-inner {
-      position: absolute; inset: 2px; z-index: 1;
-      border-radius: 50%;
-      background: var(--teal);
-      display: grid; place-items: center;
-      overflow: hidden;
-      transition: filter var(--trans);
-    }
-
-    .avatar-ring:hover .avatar-inner { filter: brightness(.75); }
-
-    .avatar-initials {
-      font-family: 'Geist', sans-serif;
-      font-size: 1.5rem; font-weight: 600; color: #fff;
-    }
-
-    .avatar-inner img {
-      width: 100%; height: 100%;
-      object-fit: cover; display: none;
-    }
-
-    .avatar-overlay {
-      position: absolute; inset: 2px; z-index: 2;
-      border-radius: 50%;
-      display: grid; place-items: center;
-      opacity: 0; transition: opacity var(--trans);
-    }
-
-    .avatar-ring:hover .avatar-overlay { opacity: 1; }
-    .avatar-overlay svg { width: 18px; height: 18px; color: #fff; }
-
-    .profile-name {
-      font-family: 'Instrument Serif', serif;
-      font-size: 1.2rem; font-weight: 400;
-      margin-bottom: .15rem;
-    }
-
-    .profile-email { font-size: .78rem; color: var(--muted); margin-bottom: .75rem; }
-
-    .role-badge {
-      display: inline-flex; align-items: center; gap: .3rem;
-      font-size: .68rem; font-weight: 600;
-      padding: .2rem .6rem; border-radius: 50px;
-      background: var(--teal-light); color: var(--teal-dark);
-      letter-spacing: .03em;
-    }
-
-    .role-badge-dot {
-      width: 4px; height: 4px; border-radius: 50%;
-      background: var(--teal);
-    }
-
-    .profile-stats {
-      padding: 1rem 1.4rem;
-      display: flex; flex-direction: column; gap: .6rem;
-    }
-
-    .stat-row {
-      display: flex; align-items: center; justify-content: space-between;
-      font-size: .8rem;
-    }
-
-    .stat-label {
-      display: flex; align-items: center; gap: .4rem;
-      color: var(--muted);
-    }
-
-    .stat-label svg { width: 12px; height: 12px; }
-    .stat-value { font-weight: 500; color: var(--ink); }
-
-    /* ── GROUPS ── */
-    .groups-list { display: flex; flex-direction: column; gap: .4rem; }
-
-    .group-pill {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: .55rem .8rem;
-      background: var(--paper);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      transition: border-color var(--trans), background var(--trans), transform var(--trans);
-      cursor: default;
-    }
-
-    .group-pill:hover {
-      border-color: var(--teal-mid);
-      background: var(--teal-light);
-      transform: translateX(2px);
-    }
-
-    .group-pill-left { display: flex; align-items: center; gap: .5rem; }
-
-    .group-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--teal); flex-shrink: 0;
-    }
-
-    .group-pill-name { font-size: .8rem; font-weight: 500; }
-
-    .group-badge {
-      font-size: .64rem; font-weight: 600;
-      padding: .12rem .45rem; border-radius: 50px;
-    }
-
-    .badge-leader { background: var(--teal-light); color: var(--teal-dark); }
-    .badge-member { background: var(--blue-light); color: var(--blue); }
-
-    /* ── FORM ── */
-    .form-grid { display: flex; flex-direction: column; gap: 1rem; }
-
-    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
-
-    .field { display: flex; flex-direction: column; gap: .28rem; }
-
-    .field label {
-      font-size: .66rem; font-weight: 600;
-      letter-spacing: .07em; text-transform: uppercase;
-      color: var(--muted-2);
-    }
-
-    .field input, .field select {
-      padding: .62rem .88rem;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-family: 'Geist', sans-serif; font-size: .875rem;
-      color: var(--ink); background: var(--paper);
-      transition: border-color var(--trans), background var(--trans),
-                  box-shadow var(--trans), transform var(--trans);
-      outline: none; width: 100%;
-    }
-
-    .field input:focus {
-      border-color: var(--teal);
-      background: var(--white);
-      box-shadow: 0 0 0 3px var(--teal-glow);
-      transform: translateY(-1px);
-    }
-
-    .field input:disabled {
-      opacity: .5; cursor: not-allowed;
-      background: rgba(0,0,0,.02);
-    }
-
-    .field input::placeholder { color: #afc4bc; }
-
-    .field-hint { font-size: .7rem; color: var(--muted-2); }
-
-    .form-divider {
-      height: 1px; background: var(--border);
-      margin: .2rem 0;
-    }
-
-    .form-actions {
-      display: flex; align-items: center; justify-content: flex-end;
-      gap: .6rem; flex-wrap: wrap;
-    }
-
-    /* ── DANGER ZONE ── */
-    .danger-zone {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 1rem;
-      margin-top: 1.75rem;
-      padding: 1.1rem 1.4rem;
-      border: 1px solid #f0bfbf;
-      border-radius: var(--radius);
-      background: var(--red-light);
-    }
-
-    .danger-text strong {
-      display: block; font-size: .84rem; font-weight: 600;
-      color: var(--red); margin-bottom: .1rem;
-    }
-
-    .danger-text p { font-size: .76rem; color: #9a2f2f; }
-
-    /* ── FLASH ── */
-    .flash-stack { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
-    .flash-stack:empty { display: none; }
-
-    /* ── ANIMATIONS ── */
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to   { opacity: 1; }
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .page-header  { opacity: 0; animation: fadeUp .45s .08s forwards; }
-    .left-col > *:nth-child(1) { opacity: 0; animation: fadeUp .45s .14s forwards; }
-    .left-col > *:nth-child(2) { opacity: 0; animation: fadeUp .45s .22s forwards; }
-    .right-col    { opacity: 0; animation: fadeUp .45s .18s forwards; }
-    .danger-zone  { opacity: 0; animation: fadeUp .45s .3s  forwards; }
-
-    /* sidebar entrance */
-    .sidebar-link {
-      opacity: 0;
-      animation: fadeIn .3s forwards;
-    }
-
-    .sidebar-link:nth-child(1) { animation-delay: .05s; }
-    .sidebar-link:nth-child(2) { animation-delay: .1s;  }
-    .sidebar-link:nth-child(3) { animation-delay: .15s; }
-    .sidebar-link:nth-child(4) { animation-delay: .2s;  }
-    .sidebar-link:nth-child(5) { animation-delay: .25s; }
-
-    /* form field stagger */
-    .form-grid > *:nth-child(1) { opacity: 0; animation: fadeUp .4s .25s forwards; }
-    .form-grid > *:nth-child(2) { opacity: 0; animation: fadeUp .4s .31s forwards; }
-    .form-grid > *:nth-child(3) { opacity: 0; animation: fadeUp .4s .37s forwards; }
-    .form-grid > *:nth-child(4) { opacity: 0; animation: fadeUp .4s .43s forwards; }
-    .form-grid > *:nth-child(5) { opacity: 0; animation: fadeUp .4s .49s forwards; }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width: 960px) {
-      body.nav-open { overflow: hidden; }
-      .sidebar {
-        transform: translateX(-100%);
-        transition: transform var(--trans);
-      }
-      body.nav-open .sidebar { transform: translateX(0); }
-      body.nav-open .mobile-nav-backdrop {
-        opacity: 1;
-        pointer-events: auto;
-      }
-      .layout  { margin-left: 0; }
-      .profile-grid { grid-template-columns: 1fr; }
-      .field-row    { grid-template-columns: 1fr; }
-      .page { padding: 1.2rem 1rem 3rem; }
-      .topbar {
-        padding: .8rem 1rem;
-        gap: .75rem;
-      }
-      .topbar-actions { margin-left: auto; }
-      .mobile-nav-toggle { display: inline-flex; }
+      --ink: #0d0d0d; --paper: #f5f2ec; --cream: #ede9e0; --surface: #ffffff;
+      --accent: #c8502a; --accent-light: #e8724f; --accent-glow: rgba(200,80,42,0.12);
+      --gold: #c9a84c; --blue: #2563ba; --blue-light: #dbeafe;
+      --green: #1a7a4a; --green-light: #dcfce7;
+      --red: #c0392b; --red-light: #ffe9e9;
+      --muted: #7a7468; --muted-2: #a09890;
+      --border: rgba(13,13,13,0.08); --border-strong: rgba(13,13,13,0.14);
+      --sidebar-w: 240px;
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-body: 'DM Sans', sans-serif;
+      --radius: 14px; --radius-sm: 9px;
+      --trans: 0.2s cubic-bezier(0.4,0,0.2,1);
+      --shadow-sm: 0 1px 4px rgba(13,13,13,0.06);
+      --shadow-md: 0 4px 18px rgba(13,13,13,0.08);
+      --shadow-lg: 0 12px 40px rgba(13,13,13,0.12);
+    }
+
+    body { font-family: var(--font-body); background: var(--paper); color: var(--ink); min-height: 100vh; cursor: none; }
+
+    /* CURSOR */
+    .cursor { position:fixed;top:0;left:0;width:10px;height:10px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .22s,height .22s; }
+    .cursor-ring { position:fixed;top:0;left:0;width:30px;height:30px;border:1.5px solid var(--accent);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);opacity:.4; }
+    body::before { content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9000;opacity:.3; }
+
+    /* SIDEBAR */
+    .sidebar { position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--ink);display:flex;flex-direction:column;padding:1.5rem 1rem;z-index:100;overflow:hidden; }
+    .sidebar::before { content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(200,80,42,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(200,80,42,0.04) 1px,transparent 1px);background-size:32px 32px;pointer-events:none; }
+    .sidebar-orb { position:absolute;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(200,80,42,0.12) 0%,transparent 65%);bottom:-80px;right:-100px;pointer-events:none;animation:orbDrift 12s ease-in-out infinite alternate; }
+    @keyframes orbDrift { from{transform:translate(0,0) scale(1);}to{transform:translate(15px,-20px) scale(1.05);} }
+    .sidebar-inner { position:relative;z-index:1;display:flex;flex-direction:column;height:100%; }
+    .sidebar-logo { display:flex;align-items:center;gap:9px;text-decoration:none;margin-bottom:2rem;padding:0 0.25rem; }
+    .sidebar-logo-mark { width:32px;height:32px;border-radius:8px;background:var(--accent);display:grid;place-items:center;transition:transform var(--trans); }
+    .sidebar-logo:hover .sidebar-logo-mark { transform:rotate(-6deg) scale(1.06); }
+    .sidebar-logo-name { font-family:var(--font-display);font-size:1.3rem;color:white;letter-spacing:-0.01em; }
+    .sidebar-logo-name em { font-style:italic;color:var(--accent-light); }
+    .sidebar-section-label { font-size:0.6rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.22);padding:0 0.5rem;margin-bottom:0.4rem;margin-top:0.5rem; }
+    .nav-item { display:flex;align-items:center;gap:0.65rem;padding:0.6rem 0.7rem;border-radius:8px;text-decoration:none;font-size:0.84rem;font-weight:500;color:rgba(255,255,255,0.5);transition:background var(--trans),color var(--trans),transform var(--trans);margin-bottom:1px;position:relative; }
+    .nav-item svg { width:16px;height:16px;flex-shrink:0;opacity:0.7;transition:opacity var(--trans); }
+    .nav-item:hover { background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.88);transform:translateX(2px); }
+    .nav-item:hover svg { opacity:1; }
+    .nav-item.active { background:rgba(200,80,42,0.18);color:var(--accent-light); }
+    .nav-item.active svg { opacity:1; }
+    .nav-item.active::before { content:'';position:absolute;left:0;top:25%;bottom:25%;width:3px;background:var(--accent);border-radius:99px; }
+    .nav-badge { margin-left:auto;background:var(--accent);color:white;font-size:0.6rem;font-weight:700;padding:0.1rem 0.45rem;border-radius:99px; }
+    .sidebar-divider { height:1px;background:rgba(255,255,255,0.06);margin:0.75rem 0; }
+    .sidebar-user { margin-top:auto;padding:0.75rem;border-radius:var(--radius-sm);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:0.65rem; }
+    .user-av { width:32px;height:32px;border-radius:50%;background:var(--accent);display:grid;place-items:center;font-size:0.65rem;font-weight:700;color:white;flex-shrink:0;overflow:hidden; }
+    .user-av img { width:100%;height:100%;object-fit:cover;display:none; }
+    .user-name { font-size:0.82rem;font-weight:500;color:rgba(255,255,255,0.75); }
+    .user-role { font-size:0.68rem;color:rgba(255,255,255,0.28); }
+    .user-logout { margin-left:auto;color:rgba(255,255,255,0.25);cursor:pointer;transition:color var(--trans); }
+    .user-logout:hover { color:rgba(255,255,255,0.6); }
+
+    /* TOPBAR */
+    .topbar { position:fixed;top:0;left:var(--sidebar-w);right:0;height:56px;z-index:90;background:rgba(245,242,236,0.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 2rem; }
+    .topbar-left { display:flex;align-items:center;gap:0.5rem;font-size:0.78rem;color:var(--muted); }
+    .topbar-left span { color:var(--ink);font-weight:500; }
+    .topbar-sep { opacity:0.35; }
+    .topbar-right { display:flex;align-items:center;gap:0.75rem; }
+    .topbar-btn { height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:0.4rem;padding:0 0.75rem;cursor:pointer;font-family:var(--font-body);font-size:0.78rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all var(--trans); }
+    .topbar-btn svg { width:14px;height:14px;stroke:var(--muted); }
+    .topbar-btn:hover { background:var(--cream);border-color:var(--border-strong);color:var(--ink);transform:translateY(-1px); }
+    .topbar-date { font-size:0.78rem;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:0.3rem 0.75rem;border-radius:99px; }
+
+    /* MAIN */
+    .main-content { margin-left:var(--sidebar-w);margin-top:56px;padding:2rem;min-height:calc(100vh - 56px); }
+
+    /* HERO */
+    .page-hero { background:var(--ink);border-radius:var(--radius);padding:2.5rem;margin-bottom:1.75rem;position:relative;overflow:hidden; }
+    .page-hero::before { content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(200,80,42,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(200,80,42,0.05) 1px,transparent 1px);background-size:40px 40px;pointer-events:none; }
+    .hero-orb { position:absolute;border-radius:50%;pointer-events:none; }
+    .hero-orb-1 { width:400px;height:400px;background:radial-gradient(circle,rgba(200,80,42,0.16) 0%,transparent 65%);top:-150px;right:-80px;animation:orbDrift 16s ease-in-out infinite alternate; }
+    .hero-orb-2 { width:200px;height:200px;background:radial-gradient(circle,rgba(201,168,76,0.1) 0%,transparent 70%);bottom:-60px;left:30%;animation:orbDrift 10s ease-in-out infinite alternate-reverse; }
+    .hero-inner { position:relative;z-index:1;display:flex;align-items:center;gap:2rem; }
+    .hero-eyebrow { font-size:0.68rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent-light);display:flex;align-items:center;gap:0.5rem;margin-bottom:0.65rem;opacity:0;animation:fadeUp 0.5s 0.1s forwards; }
+    .hero-eyebrow::before { content:'';width:18px;height:1px;background:var(--accent-light); }
+    .page-hero h1 { font-family:var(--font-display);font-size:2.2rem;line-height:1.1;letter-spacing:-0.02em;color:white;margin-bottom:0.4rem;opacity:0;animation:fadeUp 0.55s 0.18s forwards; }
+    .page-hero h1 em { font-style:italic;color:var(--accent-light); }
+    .page-hero p { font-size:0.86rem;color:rgba(255,255,255,0.42);line-height:1.7;font-weight:300;opacity:0;animation:fadeUp 0.55s 0.26s forwards; }
+
+    /* Avatar in hero */
+    .hero-avatar-wrap { flex-shrink:0;opacity:0;animation:fadeIn 0.7s 0.3s forwards; }
+    .hero-avatar-ring { position:relative;width:88px;height:88px; }
+    .hero-avatar-ring::before { content:'';position:absolute;inset:-4px;border-radius:50%;background:conic-gradient(var(--accent) 0%,var(--accent-light) 50%,var(--gold) 100%);animation:rotateSpin 8s linear infinite;opacity:0.65; }
+    .hero-avatar-ring::after { content:'';position:absolute;inset:-2px;border-radius:50%;background:var(--ink); }
+    @keyframes rotateSpin { to{transform:rotate(360deg);} }
+    .hero-avatar-inner { position:absolute;inset:2px;z-index:1;border-radius:50%;background:var(--accent);display:grid;place-items:center;overflow:hidden;cursor:pointer;transition:filter var(--trans); }
+    .hero-avatar-inner:hover { filter:brightness(0.7); }
+    .hero-avatar-initials { font-family:var(--font-display);font-size:1.7rem;color:white;font-style:italic; }
+    .hero-avatar-inner img { width:100%;height:100%;object-fit:cover;display:none; }
+    .hero-avatar-overlay { position:absolute;inset:0;display:grid;place-items:center;opacity:0;transition:opacity var(--trans);z-index:2; }
+    .hero-avatar-inner:hover .hero-avatar-overlay { opacity:1; }
+    .hero-avatar-overlay svg { width:20px;height:20px;color:white; }
+
+    /* SECTION HEAD */
+    .section-head { display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.1rem; }
+    .section-eyebrow { font-size:0.65rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:0.4rem;margin-bottom:0.25rem; }
+    .section-eyebrow::before { content:'';width:14px;height:1px;background:var(--accent); }
+    .section-title { font-family:var(--font-display);font-size:1.55rem;line-height:1.15;letter-spacing:-0.01em; }
+
+    /* PROFILE GRID */
+    .profile-grid { display:grid;grid-template-columns:280px 1fr;gap:1.25rem;align-items:start; }
+
+    /* PANEL */
+    .panel { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;opacity:0;animation:fadeUp 0.5s ease forwards; }
+    .panel-header { padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between; }
+    .panel-title { font-family:var(--font-display);font-size:1.1rem;letter-spacing:-0.01em; }
+    .panel-meta { font-size:0.74rem;color:var(--muted-2); }
+    .panel-body { padding:1.4rem; }
+
+    /* PROFILE SUMMARY */
+    .summary-hero { padding:2rem 1.4rem 1.25rem;border-bottom:1px solid var(--border);text-align:center;display:flex;flex-direction:column;align-items:center;gap:0.5rem; }
+    .summary-name { font-family:var(--font-display);font-size:1.3rem;letter-spacing:-0.01em;margin-top:0.25rem; }
+    .summary-email { font-size:0.78rem;color:var(--muted); }
+    .summary-role-badge { display:inline-flex;align-items:center;gap:0.35rem;font-size:0.68rem;font-weight:700;padding:0.22rem 0.65rem;border-radius:99px;background:rgba(200,80,42,0.1);color:var(--accent);letter-spacing:0.04em;text-transform:uppercase;margin-top:0.25rem; }
+    .summary-role-dot { width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulseDot 2s infinite; }
+    @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.6);} }
+
+    /* Mini avatar in summary */
+    .summary-avatar-wrap { position:relative;width:72px;height:72px;margin-bottom:0.5rem;cursor:pointer; }
+    .summary-avatar-ring { position:absolute;inset:-3px;border-radius:50%;background:conic-gradient(var(--accent),var(--accent-light),var(--gold),var(--accent));animation:rotateSpin 8s linear infinite;opacity:0.55; }
+    .summary-avatar-bg { position:absolute;inset:-1px;border-radius:50%;background:var(--surface); }
+    .summary-avatar-inner { position:absolute;inset:2px;border-radius:50%;background:var(--accent);display:grid;place-items:center;overflow:hidden;z-index:1;transition:filter var(--trans); }
+    .summary-avatar-wrap:hover .summary-avatar-inner { filter:brightness(0.72); }
+    .summary-avatar-initials { font-family:var(--font-display);font-size:1.4rem;color:white;font-style:italic; }
+    .summary-avatar-inner img { width:100%;height:100%;object-fit:cover;display:none; }
+    .summary-avatar-overlay { position:absolute;inset:0;display:grid;place-items:center;opacity:0;transition:opacity var(--trans);z-index:2; }
+    .summary-avatar-wrap:hover .summary-avatar-overlay { opacity:1; }
+    .summary-avatar-overlay svg { width:16px;height:16px;color:white; }
+
+    /* Stats */
+    .stat-list { display:flex;flex-direction:column;gap:0;padding:0.25rem 0; }
+    .stat-row { display:flex;align-items:center;justify-content:space-between;padding:0.65rem 1.4rem;border-bottom:1px solid var(--border);font-size:0.82rem; }
+    .stat-row:last-child { border-bottom:none; }
+    .stat-label { display:flex;align-items:center;gap:0.45rem;color:var(--muted); }
+    .stat-label svg { width:13px;height:13px; }
+    .stat-value { font-weight:600;color:var(--ink); }
+
+    /* Groups list */
+    .groups-list { display:flex;flex-direction:column;gap:0.4rem; }
+    .group-pill { display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.85rem;background:var(--paper);border:1px solid var(--border);border-radius:var(--radius-sm);transition:border-color var(--trans),background var(--trans),transform var(--trans);cursor:default; }
+    .group-pill:hover { border-color:var(--border-strong);background:var(--cream);transform:translateX(3px); }
+    .group-pill-left { display:flex;align-items:center;gap:0.5rem; }
+    .group-color-dot { width:7px;height:7px;border-radius:50%;flex-shrink:0; }
+    .group-pill-name { font-size:0.82rem;font-weight:500; }
+    .group-role-tag { font-size:0.63rem;font-weight:700;padding:0.14rem 0.45rem;border-radius:99px;text-transform:uppercase;letter-spacing:0.04em; }
+    .tag-leader { background:rgba(200,80,42,0.1);color:var(--accent); }
+    .tag-member { background:var(--blue-light);color:var(--blue); }
+    .tag-editor { background:rgba(201,168,76,0.15);color:#7a5c00; }
+
+    /* FORM */
+    .form-grid { display:flex;flex-direction:column;gap:1rem; }
+    .field-row { display:grid;grid-template-columns:1fr 1fr;gap:0.75rem; }
+    .field { display:flex;flex-direction:column;gap:0.3rem; }
+    .field label { font-size:0.66rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted-2);transition:color var(--trans); }
+    .field:focus-within label { color:var(--accent); }
+    .field input, .field select, .field textarea { padding:0.68rem 0.95rem;border:1.5px solid rgba(13,13,13,0.12);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:0.875rem;color:var(--ink);background:var(--paper);transition:border-color var(--trans),background var(--trans),box-shadow var(--trans),transform var(--trans);outline:none;width:100%; }
+    .field input:hover,.field select:hover { border-color:rgba(13,13,13,0.22); }
+    .field input:focus,.field select:focus,.field textarea:focus { border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3.5px var(--accent-glow);transform:translateY(-1px); }
+    .field input::placeholder,.field textarea::placeholder { color:#bab4aa; }
+    .field input:disabled { opacity:0.5;cursor:not-allowed;background:rgba(0,0,0,0.02); }
+    .field-hint { font-size:0.7rem;color:var(--muted-2);line-height:1.5; }
+    .form-divider { height:1px;background:var(--border);margin:0.1rem 0; }
+
+    /* File input */
+    .file-input-wrap { position:relative; }
+    .file-input-wrap input[type="file"] { padding:0.55rem 0.95rem;cursor:pointer; }
+    .file-input-wrap input[type="file"]::file-selector-button { font-family:var(--font-body);font-size:0.76rem;font-weight:600;padding:0.25rem 0.7rem;border-radius:99px;border:1px solid var(--border-strong);background:var(--cream);cursor:pointer;margin-right:0.6rem;transition:background var(--trans);color:var(--ink); }
+    .file-input-wrap input[type="file"]::file-selector-button:hover { background:var(--ink);color:white; }
+
+    /* Image preview */
+    .img-preview { width:100%;max-height:160px;object-fit:cover;border-radius:var(--radius-sm);margin-top:0.5rem;display:none;border:1px solid var(--border); }
+
+    /* FORM ACTIONS */
+    .form-actions { display:flex;align-items:center;justify-content:flex-end;gap:0.6rem;flex-wrap:wrap;padding-top:0.25rem; }
+
+    /* BUTTONS */
+    .btn { display:inline-flex;align-items:center;gap:0.45rem;padding:0.62rem 1.25rem;border-radius:99px;font-family:var(--font-body);font-weight:600;font-size:0.86rem;cursor:pointer;text-decoration:none;transition:all var(--trans);border:none;letter-spacing:0.01em; }
+    .btn svg { width:14px;height:14px;flex-shrink:0; }
+    .btn-primary { background:var(--ink);color:var(--surface);box-shadow:0 4px 18px rgba(13,13,13,0.18);position:relative;overflow:hidden; }
+    .btn-primary:hover { background:var(--accent);transform:translateY(-2px);box-shadow:0 8px 26px rgba(200,80,42,0.32); }
+    .btn-primary::after { content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,0.18) 50%,transparent 65%);transform:translateX(-100%); }
+    .btn-primary:hover::after { transform:translateX(100%);transition:transform 0.5s ease; }
+    .btn-ghost { background:transparent;color:var(--muted);border:1.5px solid var(--border-strong); }
+    .btn-ghost:hover { border-color:var(--border-strong);color:var(--ink);background:var(--cream); }
+
+    /* DANGER ZONE */
+    .danger-zone { margin-top:1.75rem;padding:1.25rem 1.5rem;border:1px solid rgba(192,57,43,0.25);border-radius:var(--radius);background:rgba(192,57,43,0.04);display:flex;align-items:center;justify-content:space-between;gap:1rem;opacity:0;animation:fadeUp 0.5s 0.5s forwards; }
+    .danger-label { font-size:0.86rem;font-weight:600;color:var(--red);margin-bottom:0.15rem; }
+    .danger-sub { font-size:0.76rem;color:rgba(192,57,43,0.7); }
+    .btn-danger { background:transparent;color:var(--red);border:1.5px solid rgba(192,57,43,0.35);padding:0.6rem 1.1rem;border-radius:99px;font-family:var(--font-body);font-size:0.84rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:0.45rem;transition:all var(--trans);flex-shrink:0; }
+    .btn-danger svg { width:14px;height:14px; }
+    .btn-danger:hover { background:var(--red);color:white;border-color:var(--red);transform:translateY(-1px);box-shadow:0 4px 16px rgba(192,57,43,0.28); }
+
+    /* FLASH */
+    #flash-container { margin-bottom:1.25rem; }
+    #flash-container:empty { display:none; }
+    .flash { padding:0.7rem 1rem;border-radius:var(--radius-sm);font-size:0.83rem;font-weight:500;border:1px solid;animation:fadeUp 0.3s ease;display:flex;align-items:center;gap:0.5rem; }
+    .flash-error { background:#fff2f0;border-color:#ffd3cc;color:#991414; }
+    .flash-success { background:#f0fdf6;border-color:#c6f0da;color:#166534; }
+
+    /* ACTIVITY FEED */
+    .activity-list { display:flex;flex-direction:column; }
+    .activity-item { display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem 0;border-bottom:1px solid var(--border); }
+    .activity-item:last-child { border-bottom:none; }
+    .activity-icon { width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;margin-top:1px; }
+    .activity-icon svg { width:13px;height:13px; }
+    .activity-text { font-size:0.82rem;color:var(--ink);line-height:1.5; }
+    .activity-text strong { font-weight:600; }
+    .activity-time { font-size:0.7rem;color:var(--muted-2);margin-top:0.15rem; }
+
+    /* PASSWORD STRENGTH */
+    .pw-wrap { position:relative; }
+    .pw-toggle { position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted-2);padding:0;transition:color var(--trans);line-height:0; }
+    .pw-toggle:hover { color:var(--accent); }
+    .pw-toggle svg { width:15px;height:15px;display:block; }
+    .strength-row { display:flex;gap:3px;margin-top:0.35rem; }
+    .strength-seg { flex:1;height:2.5px;border-radius:2px;background:rgba(13,13,13,0.08);transition:background 0.25s; }
+    .strength-seg.weak   { background:#d94f4f; }
+    .strength-seg.fair   { background:var(--gold); }
+    .strength-seg.good   { background:var(--green); }
+    .strength-label { font-size:0.68rem;color:var(--muted-2);margin-top:0.2rem;min-height:1em; }
+
+    @keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
+
+    @media (max-width:900px) {
+      .sidebar{transform:translateX(-100%);} .main-content{margin-left:0;} .topbar{left:0;}
+      .profile-grid{grid-template-columns:1fr;} .field-row{grid-template-columns:1fr;}
     }
   </style>
 </head>
 <body>
 
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
 <!-- SIDEBAR -->
 <aside class="sidebar">
+  <div class="sidebar-orb"></div>
   <div class="sidebar-inner">
     <a href="index.html" class="sidebar-logo">
-      <div class="sidebar-logo-mark">
-        <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
-          <polyline points="4,10 8,14 16,6" stroke="#fff" stroke-width="2.4"
-            stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <span class="sidebar-logo-name">Task<span>ly</span></span>
+      <div class="sidebar-logo-mark"><svg width="15" height="15" viewBox="0 0 20 20" fill="none"><polyline points="4,10 8,14 16,6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <span class="sidebar-logo-name">Task<em>ly</em></span>
     </a>
-
-    <nav class="sidebar-nav">
-      <div class="sidebar-section">Overview</div>
-      <a href="dashboard.html" class="sidebar-link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-        </svg>
-        Dashboard
-      </a>
-      <a href="tasks.html" class="sidebar-link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 11l3 3L22 4"/>
-          <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-        </svg>
-        Tasks
-      </a>
-      <a href="groups.html" class="sidebar-link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-          <path d="M16 3.13a4 4 0 010 7.75"/>
-        </svg>
-        Groups
-        <span class="sidebar-badge" style="margin-left:auto; background:var(--teal); color:#fff; font-size:.63rem; font-weight:700; padding:.1rem .42rem; border-radius:50px;">0</span>
-      </a>
-      <a href="feed.html" class="sidebar-link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-        Feed
-      </a>
-
-      <div class="sidebar-section">Account</div>
-      <a href="profile.html" class="sidebar-link active">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-        Profile
-      </a>
-      <a href="admin.html" class="sidebar-link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
-        </svg>
-        Admin
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="sidebar-user">
-        <div class="sidebar-avatar" id="sidebar-avatar">MU</div>
-        <div>
-          <div class="sidebar-user-name" id="sidebar-name">Muhammad AbdulKadir Saeed</div>
-          <div class="sidebar-user-role">Student Workspace</div>
-        </div>
+    <div class="sidebar-section-label">Main</div>
+    <a href="dashboard.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+    <a href="tasks.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-2 10h10l-9 10 2-10H3Z"/></svg>Tasks<span class="nav-badge">5</span></a>
+    <a href="groups.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Groups</a>
+    <a href="activity.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Activity</a>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section-label">Account</div>
+    <a href="profile.html" class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Profile</a>
+    <a href="settings.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+    <a href="admin.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>Admin</a>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-user">
+      <div class="user-av" id="sidebar-av-wrap">
+        <span id="sidebar-av-text">JD</span>
+        <img id="sidebar-av-img" src="" alt=""/>
       </div>
+      <div>
+        <div class="user-name" id="sidebar-name">Jamie D.</div>
+        <div class="user-role">Leader</div>
+      </div>
+      <div class="user-logout"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
     </div>
   </div>
 </aside>
 
-<div class="mobile-nav-backdrop" id="mobile-nav-backdrop"></div>
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-left"><span>Taskly</span><span class="topbar-sep">/</span><span>Profile</span></div>
+  <div class="topbar-right">
+    <a href="dashboard.html" class="topbar-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <div class="topbar-date" id="topbar-date">—</div>
+  </div>
+</header>
 
-<!-- MAIN LAYOUT -->
-<div class="layout">
+<!-- MAIN -->
+<main class="main-content">
 
-  <header class="topbar">
-    <div class="topbar-crumb">
-      <span>Taskly</span>
-      <span>/</span>
-      <strong>Profile</strong>
-    </div>
-    <div class="topbar-actions">
-      <button class="mobile-nav-toggle" id="mobile-nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="4" y1="7" x2="20" y2="7"></line>
-          <line x1="4" y1="12" x2="20" y2="12"></line>
-          <line x1="4" y1="17" x2="20" y2="17"></line>
-        </svg>
-      </button>
-      <a href="dashboard.html" class="btn btn-ghost" style="font-size:.8rem;padding:.46rem .95rem;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-        </svg>
-        Dashboard
-      </a>
-    </div>
-  </header>
-
-  <main class="page">
-
-    <div class="page-header">
-      <div class="page-eyebrow">Account</div>
-      <h1 class="page-title">Your profile</h1>
-      <p class="page-sub">Keep your details current and presentation-ready.</p>
-    </div>
-
-    <div id="flash-container" class="flash-stack"></div>
-
-    <div class="profile-grid">
-
-      <!-- LEFT COLUMN -->
-      <div class="left-col" style="display:flex;flex-direction:column;gap:1.25rem;">
-
-        <!-- Summary card -->
-        <div class="card" id="profile-summary">
-          <div class="avatar-section">
-            <div class="avatar-ring" id="avatar-ring">
-              <div class="avatar-inner">
-                <span class="avatar-initials" id="summary-initials">AL</span>
-                <img id="summary-avatar-img" src="" alt="Profile picture"/>
-              </div>
-              <div class="avatar-overlay">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-                  <circle cx="12" cy="13" r="4"/>
-                </svg>
-              </div>
-            </div>
-
-            <div class="profile-name" id="summary-name">Ahmed L.</div>
-            <div class="profile-email" id="summary-email">ahmed@taskly.demo</div>
-            <span class="role-badge">
-              <span class="role-badge-dot"></span>
-              <span id="summary-role">Group leader</span>
-            </span>
-          </div>
-
-          <div class="profile-stats">
-            <div class="stat-row">
-              <span class="stat-label">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 010 7.75"/>
-                </svg>
-                Groups
-              </span>
-              <span class="stat-value" id="summary-groups-count">2</span>
-            </div>
-            <div class="stat-row">
-              <span class="stat-label">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M9 11l3 3L22 4"/>
-                  <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-                </svg>
-                Tasks assigned
-              </span>
-              <span class="stat-value">8</span>
-            </div>
-            <div class="stat-row">
-              <span class="stat-label">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                Member since
-              </span>
-              <span class="stat-value">Apr 2025</span>
+  <!-- HERO -->
+  <section class="page-hero">
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+    <div class="hero-inner">
+      <div style="flex:1">
+        <div class="hero-eyebrow">Account</div>
+        <h1>Your <em>profile</em></h1>
+        <p>Keep your details current, upload a photo, and manage your account settings.</p>
+      </div>
+      <div class="hero-avatar-wrap">
+        <div class="hero-avatar-ring">
+          <div class="hero-avatar-inner" id="hero-avatar" onclick="document.getElementById('profile-upload').click()">
+            <span class="hero-avatar-initials" id="hero-initials">JD</span>
+            <img id="hero-avatar-img" src="" alt=""/>
+            <div class="hero-avatar-overlay">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
 
-        <!-- Groups card -->
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Your groups</span>
-            <span class="card-meta" id="groups-count-label">2 groups</span>
-          </div>
-          <div class="card-body">
-            <div class="groups-list" id="profile-groups">
-              <div class="group-pill">
-                <div class="group-pill-left">
-                  <div class="group-dot"></div>
-                  <span class="group-pill-name">Frontend Dev Team</span>
-                </div>
-                <span class="group-badge badge-leader">Leader</span>
-              </div>
-              <div class="group-pill">
-                <div class="group-pill-left">
-                  <div class="group-dot" style="background:var(--blue);"></div>
-                  <span class="group-pill-name">UX Research Group</span>
-                </div>
-                <span class="group-badge badge-member">Member</span>
+  <div id="flash-container"></div>
+
+  <!-- SECTION HEAD -->
+  <div class="section-head" style="opacity:0;animation:fadeUp 0.45s 0.15s forwards">
+    <div><div class="section-eyebrow">Your details</div><div class="section-title">Account & preferences</div></div>
+  </div>
+
+  <div class="profile-grid">
+
+    <!-- LEFT COL -->
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+
+      <!-- Summary card -->
+      <div class="panel" style="animation-delay:0.12s">
+        <div class="summary-hero">
+          <div class="summary-avatar-wrap" onclick="document.getElementById('profile-upload').click()">
+            <div class="summary-avatar-ring"></div>
+            <div class="summary-avatar-bg"></div>
+            <div class="summary-avatar-inner">
+              <span class="summary-avatar-initials" id="summary-initials">JD</span>
+              <img id="summary-avatar-img" src="" alt=""/>
+              <div class="summary-avatar-overlay">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
               </div>
             </div>
           </div>
+          <div class="summary-name" id="summary-name">Jamie D.</div>
+          <div class="summary-email" id="summary-email">jamie@taskly.demo</div>
+          <span class="summary-role-badge"><span class="summary-role-dot"></span><span id="summary-role">Group Leader</span></span>
         </div>
-
+        <div class="stat-list">
+          <div class="stat-row">
+            <span class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Groups</span>
+            <span class="stat-value">4</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-2 10h10l-9 10 2-10H3Z"/></svg>Tasks assigned</span>
+            <span class="stat-value">8</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Completed</span>
+            <span class="stat-value" style="color:var(--green);font-weight:700;">2</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Member since</span>
+            <span class="stat-value">Apr 2025</span>
+          </div>
+        </div>
       </div>
 
-      <!-- RIGHT COLUMN -->
-      <div class="right-col">
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Update profile</span>
-            <span class="card-meta">Changes save immediately</span>
+      <!-- Groups -->
+      <div class="panel" style="animation-delay:0.2s">
+        <div class="panel-header">
+          <div class="panel-title">Your groups</div>
+          <div class="panel-meta">4 groups</div>
+        </div>
+        <div class="panel-body">
+          <div class="groups-list">
+            <div class="group-pill"><div class="group-pill-left"><div class="group-color-dot" style="background:var(--accent)"></div><span class="group-pill-name">Frontend Team</span></div><span class="group-role-tag tag-leader">Leader</span></div>
+            <div class="group-pill"><div class="group-pill-left"><div class="group-color-dot" style="background:var(--blue)"></div><span class="group-pill-name">Backend Squad</span></div><span class="group-role-tag tag-member">Member</span></div>
+            <div class="group-pill"><div class="group-pill-left"><div class="group-color-dot" style="background:var(--gold)"></div><span class="group-pill-name">Design Circle</span></div><span class="group-role-tag tag-editor">Editor</span></div>
+            <div class="group-pill"><div class="group-pill-left"><div class="group-color-dot" style="background:var(--green)"></div><span class="group-pill-name">QA &amp; Testing</span></div><span class="group-role-tag tag-member">Member</span></div>
           </div>
-          <div class="card-body">
-            <form id="profile-form" class="form-grid">
+        </div>
+      </div>
 
-              <div class="field-row">
-                <div class="field">
-                  <label for="profile-name">Full name</label>
-                  <input id="profile-name" name="name" required placeholder="Your full name"/>
-                </div>
-                <div class="field">
-                  <label for="profile-email">Email address</label>
-                  <input id="profile-email" name="email" value="ahmed@taskly.demo" disabled/>
-                  <span class="field-hint">Email cannot be changed in demo mode.</span>
-                </div>
-              </div>
+      <!-- Recent activity -->
+      <div class="panel" style="animation-delay:0.28s">
+        <div class="panel-header">
+          <div class="panel-title">Recent activity</div>
+          <a href="activity.html" style="font-size:0.74rem;color:var(--accent);text-decoration:none;font-weight:500">View all →</a>
+        </div>
+        <div class="panel-body" style="padding-top:0.25rem;padding-bottom:0.5rem;">
+          <div class="activity-list">
+            <div class="activity-item">
+              <div class="activity-icon" style="background:var(--green-light)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div><div class="activity-text">Completed <strong>Create project repo</strong></div><div class="activity-time">2 hours ago</div></div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon" style="background:rgba(200,80,42,0.1)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+              <div><div class="activity-text">Created task <strong>UI Design Review</strong></div><div class="activity-time">5 hours ago</div></div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon" style="background:var(--blue-light)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+              <div><div class="activity-text">Joined <strong>Backend Squad</strong></div><div class="activity-time">Yesterday</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-              <div class="form-divider"></div>
+    </div>
 
+    <!-- RIGHT COL -->
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+
+      <!-- Edit profile -->
+      <div class="panel" style="animation-delay:0.16s">
+        <div class="panel-header">
+          <div class="panel-title">Update profile</div>
+          <div class="panel-meta">Changes save immediately</div>
+        </div>
+        <div class="panel-body">
+          <form id="profile-form" class="form-grid">
+
+            <div class="field-row">
               <div class="field">
-                <label for="profile-picture">Profile picture URL</label>
-                <input id="profile-picture" name="profilePicture" type="url"
-                  placeholder="https://example.com/photo.jpg"/>
-                <span class="field-hint">Paste any public image URL to use as your avatar.</span>
+                <label for="p-name">Full name</label>
+                <input id="p-name" name="name" required placeholder="Your full name" value="Jamie D."/>
               </div>
-
               <div class="field">
-                <label for="profile-upload">Or upload an image</label>
-                <input id="profile-upload" name="profileUpload" type="file" accept="image/*"/>
+                <label for="p-email">Email address</label>
+                <input id="p-email" name="email" value="jamie@taskly.demo" disabled/>
+                <span class="field-hint">Email cannot be changed in demo mode.</span>
               </div>
+            </div>
 
-              <div class="form-divider"></div>
+            <div class="form-divider"></div>
 
-              <div class="form-actions">
-                <button type="button" class="btn btn-ghost" id="discard-btn">Discard</button>
-                <button type="submit" class="btn btn-primary">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
-                    <polyline points="17 21 17 13 7 13 7 21"/>
-                    <polyline points="7 3 7 8 15 8"/>
-                  </svg>
-                  Save changes
-                </button>
+            <div class="field">
+              <label for="profile-url">Profile picture URL</label>
+              <input id="profile-url" name="profileUrl" type="url" placeholder="https://example.com/photo.jpg"/>
+              <span class="field-hint">Paste any public image URL to use as your avatar.</span>
+            </div>
+
+            <div class="field file-input-wrap">
+              <label for="profile-upload">Or upload an image</label>
+              <input id="profile-upload" name="profileUpload" type="file" accept="image/*"/>
+              <img id="img-preview" class="img-preview" src="" alt="Preview"/>
+            </div>
+
+            <div class="form-divider"></div>
+
+            <div class="field">
+              <label for="p-bio">Bio <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted-2)">(optional)</span></label>
+              <textarea id="p-bio" name="bio" placeholder="Describe yourself in a few words…" style="min-height:72px;padding:0.68rem 0.95rem;border:1.5px solid rgba(13,13,13,0.12);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:0.875rem;color:var(--ink);background:var(--paper);resize:vertical;outline:none;transition:border-color var(--trans),box-shadow var(--trans);" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3.5px var(--accent-glow)'" onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-ghost" id="discard-btn">Discard</button>
+              <button type="submit" class="btn btn-primary" id="save-profile-btn">
+                Save changes
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+
+      <!-- Change password -->
+      <div class="panel" style="animation-delay:0.24s">
+        <div class="panel-header">
+          <div class="panel-title">Change password</div>
+          <div class="panel-meta">Leave blank to keep current</div>
+        </div>
+        <div class="panel-body">
+          <form id="pw-form" class="form-grid">
+
+            <div class="field">
+              <label for="pw-current">Current password</label>
+              <div class="pw-wrap">
+                <input id="pw-current" type="password" placeholder="Enter current password"/>
+                <button type="button" class="pw-toggle" onclick="togglePw('pw-current',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
               </div>
+            </div>
 
-            </form>
-          </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="pw-new">New password</label>
+                <div class="pw-wrap">
+                  <input id="pw-new" type="password" placeholder="Choose a strong password" oninput="scorePassword(this.value)"/>
+                  <button type="button" class="pw-toggle" onclick="togglePw('pw-new',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                </div>
+                <div class="strength-row"><div class="strength-seg" id="ss1"></div><div class="strength-seg" id="ss2"></div><div class="strength-seg" id="ss3"></div><div class="strength-seg" id="ss4"></div></div>
+                <span class="strength-label" id="strength-label"></span>
+              </div>
+              <div class="field">
+                <label for="pw-confirm">Confirm new password</label>
+                <input id="pw-confirm" type="password" placeholder="Repeat new password"/>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" id="save-pw-btn">
+                Update password
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </button>
+            </div>
+
+          </form>
         </div>
       </div>
 
     </div>
+  </div>
 
-    <!-- DANGER ZONE -->
-    <div class="danger-zone">
-      <div class="danger-text">
-        <strong>Delete account</strong>
-        <p>Permanently remove your account and all associated data from this demo.</p>
-      </div>
-      <button class="btn btn-danger" type="button" id="delete-account-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 21 6"/>
-          <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-          <path d="M10 11v6M14 11v6"/>
-          <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
-        </svg>
-        Delete account
-      </button>
+  <!-- DANGER ZONE -->
+  <div class="danger-zone">
+    <div>
+      <div class="danger-label">Delete account</div>
+      <div class="danger-sub">Permanently remove your account and all associated data from this demo.</div>
     </div>
+    <button class="btn-danger" id="delete-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      Delete account
+    </button>
+  </div>
 
-  </main>
-</div>
+</main>
 
 <script>
-  document.title = "Profile - Taskly";
+  /* cursor */
+  const cur=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';});
+  (function loop(){rx+=(mx-rx)*0.13;ry+=(my-ry)*0.13;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
+  function addHover(el){el.addEventListener('mouseenter',()=>{cur.style.width='16px';cur.style.height='16px';ring.style.width='44px';ring.style.height='44px';ring.style.opacity='.2';});el.addEventListener('mouseleave',()=>{cur.style.width='10px';cur.style.height='10px';ring.style.width='30px';ring.style.height='30px';ring.style.opacity='.4';});}
+  document.querySelectorAll('a,button,input,textarea,select,.nav-item,.group-pill,.hero-avatar-inner,.summary-avatar-wrap').forEach(addHover);
 
-  const mobileNavToggle = document.getElementById("mobile-nav-toggle");
-  const mobileNavBackdrop = document.getElementById("mobile-nav-backdrop");
-  const mobileNavLinks = document.querySelectorAll(".sidebar a");
+  document.getElementById('topbar-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
 
-  function setMobileNav(open) {
-    document.body.classList.toggle("nav-open", open);
-    mobileNavToggle?.setAttribute("aria-expanded", String(open));
+  /* flash */
+  function flash(msg,type='success'){const c=document.getElementById('flash-container');c.innerHTML=`<div class="flash flash-${type}">${type==='success'?'✓':'✕'} ${msg}</div>`;setTimeout(()=>{c.innerHTML='';},3800);}
+
+  /* avatar update helper */
+  function setAvatar(src){
+    ['hero-avatar-img','summary-avatar-img','sidebar-av-img'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(src){el.src=src;el.style.display='block';}else{el.style.display='none';}
+    });
+    document.getElementById('hero-initials').style.display=src?'none':'';
+    document.getElementById('summary-initials').style.display=src?'none':'';
+    document.getElementById('sidebar-av-text').style.display=src?'none':'';
   }
 
-  mobileNavToggle?.addEventListener("click", () => {
-    setMobileNav(!document.body.classList.contains("nav-open"));
+  /* name update */
+  function updateName(name){
+    if(!name) return;
+    const initials=name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    document.getElementById('summary-name').textContent=name;
+    document.getElementById('sidebar-name').textContent=name;
+    ['hero-initials','summary-initials','sidebar-av-text'].forEach(id=>{document.getElementById(id).textContent=initials;});
+  }
+
+  /* image URL field */
+  document.getElementById('profile-url').addEventListener('input',function(){
+    const val=this.value.trim();
+    if(val){setAvatar(val);document.getElementById('img-preview').src=val;document.getElementById('img-preview').style.display='block';}
+    else{setAvatar('');document.getElementById('img-preview').style.display='none';}
   });
 
-  mobileNavBackdrop?.addEventListener("click", () => setMobileNav(false));
-  mobileNavLinks.forEach((link) => link.addEventListener("click", () => setMobileNav(false)));
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") setMobileNav(false);
+  /* file upload */
+  document.getElementById('profile-upload').addEventListener('change',function(){
+    const file=this.files[0];
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const src=e.target.result;
+      setAvatar(src);
+      document.getElementById('img-preview').src=src;
+      document.getElementById('img-preview').style.display='block';
+      flash('Photo uploaded and applied!');
+    };
+    reader.readAsDataURL(file);
   });
 
-  window.addEventListener("resize", () => {
-    if (window.innerWidth > 960) setMobileNav(false);
+  /* profile form */
+  document.getElementById('profile-form').addEventListener('submit',e=>{
+    e.preventDefault();
+    const name=document.getElementById('p-name').value.trim();
+    if(name) updateName(name);
+    const btn=document.getElementById('save-profile-btn');
+    const orig=btn.innerHTML;
+    btn.style.background='var(--green)';
+    btn.innerHTML='✓ Saved!';
+    setTimeout(()=>{btn.style.background='';btn.innerHTML=orig;},2000);
+    flash('Profile updated successfully!');
+  });
+
+  /* discard */
+  document.getElementById('discard-btn').addEventListener('click',()=>{
+    document.getElementById('profile-form').reset();
+    setAvatar('');
+    document.getElementById('img-preview').style.display='none';
+    flash('Changes discarded.','error');
+  });
+
+  /* pw toggle */
+  function togglePw(id,btn){
+    const el=document.getElementById(id);
+    const show=el.type==='password';
+    el.type=show?'text':'password';
+    btn.innerHTML=show?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><path d="M1 1l22 22M1 12s4-8 11-8"/></svg>`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  }
+
+  /* password strength */
+  function scorePassword(pw){
+    const segs=[document.getElementById('ss1'),document.getElementById('ss2'),document.getElementById('ss3'),document.getElementById('ss4')];
+    const label=document.getElementById('strength-label');
+    if(!pw){segs.forEach(s=>s.className='strength-seg');label.textContent='';return;}
+    let score=0;
+    if(pw.length>=8) score++;
+    if(pw.length>=12) score++;
+    if(/[A-Z]/.test(pw)&&/[a-z]/.test(pw)) score++;
+    if(/\d/.test(pw)) score++;
+    if(/[^A-Za-z0-9]/.test(pw)) score++;
+    score=Math.min(4,Math.ceil(score*0.85));
+    const cls=['','weak','fair','good','strong'][score];
+    const lbl=['','Weak','Fair','Good','Strong'][score];
+    segs.forEach((s,i)=>{s.className='strength-seg'+(i<score?' '+cls:'');});
+    label.textContent=lbl;
+  }
+
+  /* pw form */
+  document.getElementById('pw-form').addEventListener('submit',e=>{
+    e.preventDefault();
+    const cur=document.getElementById('pw-current').value;
+    const nw=document.getElementById('pw-new').value;
+    const conf=document.getElementById('pw-confirm').value;
+    if(!cur){flash('Please enter your current password.','error');return;}
+    if(nw!==conf){flash('New passwords do not match.','error');return;}
+    if(nw.length<6){flash('Password must be at least 6 characters.','error');return;}
+    const btn=document.getElementById('save-pw-btn');
+    const orig=btn.innerHTML;
+    btn.style.background='var(--green)';
+    btn.innerHTML='✓ Updated!';
+    setTimeout(()=>{btn.style.background='';btn.innerHTML=orig;document.getElementById('pw-form').reset();scorePassword('');},2200);
+    flash('Password updated successfully!');
+  });
+
+  /* delete */
+  document.getElementById('delete-btn').addEventListener('click',()=>{
+    if(confirm('Are you sure you want to delete your account? This cannot be undone.')){
+      flash('Account deletion is disabled in demo mode.','error');
+    }
   });
 </script>
-<script type="module" src="assets/js/pages/profile.js"></script>
+<script type="module" src="assets/js/pages/profile.js" onerror="void 0"></script>
 </body>
 </html>

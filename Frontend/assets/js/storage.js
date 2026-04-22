@@ -67,7 +67,9 @@ function saveProgressLogs(logs) {
 
 function getSession() {
   const persistent = readJson(STORAGE_KEYS.session, null);
-  if (persistent) return persistent;
+  if (persistent) {
+    return persistent;
+  }
 
   const sessionOnly = sessionStorage.getItem(STORAGE_KEYS.session);
   return sessionOnly ? JSON.parse(sessionOnly) : null;
@@ -79,8 +81,13 @@ function saveSession(session, persist = false) {
     sessionStorage.removeItem(STORAGE_KEYS.session);
     return null;
   }
-  if (persist) return writeJson(STORAGE_KEYS.session, session);
+
+  if (persist) {
+    return writeJson(STORAGE_KEYS.session, session);
+  }
+
   sessionStorage.setItem(STORAGE_KEYS.session, JSON.stringify(session));
+  localStorage.removeItem(STORAGE_KEYS.session);
   return session;
 }
 
@@ -115,6 +122,26 @@ function upsertById(items, item) {
   return next;
 }
 
+function hydrateAppState(state = {}) {
+  saveUsers(Array.isArray(state.users) ? state.users : []);
+  saveGroups(Array.isArray(state.groups) ? state.groups : []);
+  saveTasks(Array.isArray(state.tasks) ? state.tasks : []);
+  saveProgressLogs(Array.isArray(state.progressLogs) ? state.progressLogs : []);
+}
+
+function clearAppState({ preserveSession = false } = {}) {
+  localStorage.removeItem(STORAGE_KEYS.users);
+  localStorage.removeItem(STORAGE_KEYS.groups);
+  localStorage.removeItem(STORAGE_KEYS.tasks);
+  localStorage.removeItem(STORAGE_KEYS.progressLogs);
+  localStorage.removeItem(STORAGE_KEYS.seeded);
+
+  if (!preserveSession) {
+    localStorage.removeItem(STORAGE_KEYS.session);
+    sessionStorage.removeItem(STORAGE_KEYS.session);
+  }
+}
+
 function exportAppData() {
   return {
     exportedAt: new Date().toISOString(),
@@ -126,184 +153,12 @@ function exportAppData() {
 }
 
 function seedAppData() {
-  if (localStorage.getItem(STORAGE_KEYS.seeded)) {
-    return;
-  }
-
-  const adminId = generateId("user");
-  const leaderId = generateId("user");
-  const studentId = generateId("user");
-  const memberId = generateId("user");
-  const groupId = generateId("group");
-
-  const users = [
-    {
-      id: adminId,
-      name: "Admin One",
-      email: "admin@demo.com",
-      password: "admin123",
-      profilePicture: "",
-      globalRole: "admin",
-      joinedGroupIds: [],
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: leaderId,
-      name: "Layla Hassan",
-      email: "leader@demo.com",
-      password: "leader123",
-      profilePicture: "",
-      globalRole: "student",
-      joinedGroupIds: [groupId],
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: studentId,
-      name: "Muhammad AbdulKadir Saeed",
-      email: "saeedmuhammadabdulkadir@gmail.com",
-      password: "student123",
-      profilePicture: "",
-      globalRole: "student",
-      joinedGroupIds: [],
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: memberId,
-      name: "Maha Saeed",
-      email: "member@demo.com",
-      password: "member123",
-      profilePicture: "",
-      globalRole: "student",
-      joinedGroupIds: [groupId],
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    },
-  ];
-
-  const groups = [
-    {
-      id: groupId,
-      groupName: "Software Engineering Team Alpha",
-      inviteCode: generateInviteCode(),
-      leaderId,
-      memberIds: [leaderId, memberId],
-      roleMap: {
-        [leaderId]: "leader",
-        [memberId]: "editor",
-      },
-      createdAt: new Date().toISOString(),
-    },
-  ];
-
-  const tasks = [
-    {
-      id: generateId("task"),
-      title: "Write project proposal",
-      description: "Draft the problem statement, system goals, and stakeholder summary.",
-      deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString(),
-      status: "Ongoing",
-      category: "Documentation",
-      assignedTo: studentId,
-      groupId,
-      isPersonal: false,
-      taskType: "deadline",
-      progressNote: "Requirements section is halfway done.",
-      createdBy: leaderId,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: generateId("task"),
-      title: "Design landing page layout",
-      description: "Create a clean HTML and CSS structure for the homepage and app shell.",
-      deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 4).toISOString(),
-      status: "Pending",
-      category: "Frontend",
-      assignedTo: memberId,
-      groupId,
-      isPersonal: false,
-      taskType: "deadline",
-      progressNote: "",
-      createdBy: leaderId,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: generateId("task"),
-      title: "Confirm meeting at 6 PM",
-      description: "Reminder for the weekly sprint check-in with the group.",
-      deadline: new Date(Date.now() + 1000 * 60 * 60 * 10).toISOString(),
-      status: "Pending",
-      category: "Reminder",
-      assignedTo: null,
-      groupId,
-      isPersonal: false,
-      taskType: "reminder",
-      progressNote: "",
-      createdBy: leaderId,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: generateId("task"),
-      title: "Prepare database ER sketch",
-      description: "Brainstorm classes and attributes before building the final interface.",
-      deadline: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-      status: "Completed",
-      category: "Analysis",
-      assignedTo: leaderId,
-      groupId,
-      isPersonal: false,
-      taskType: "deadline",
-      progressNote: "Initial ERD completed and shared with the team.",
-      createdBy: leaderId,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: generateId("task"),
-      title: "Practice final presentation",
-      description: "Review demo flow and prepare talking points for each screen.",
-      deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString(),
-      status: "Pending",
-      category: "Personal",
-      assignedTo: studentId,
-      groupId: null,
-      isPersonal: true,
-      taskType: "deadline",
-      progressNote: "",
-      createdBy: studentId,
-      createdAt: new Date().toISOString(),
-    },
-  ];
-
-  const progressLogs = [
-    {
-      id: generateId("log"),
-      taskId: tasks[0].id,
-      userId: studentId,
-      note: "Requirements section is halfway done.",
-      status: "Ongoing",
-      timestamp: new Date().toISOString(),
-    },
-    {
-      id: generateId("log"),
-      taskId: tasks[3].id,
-      userId: leaderId,
-      note: "Initial ERD completed and shared with the team.",
-      status: "Completed",
-      timestamp: new Date().toISOString(),
-    },
-  ];
-
-  saveUsers(users);
-  saveGroups(groups);
-  saveTasks(tasks);
-  saveProgressLogs(progressLogs);
-  localStorage.setItem(STORAGE_KEYS.seeded, "true");
+    // The app now hydrates from the Flask backend, so local demo seeding stays disabled.
 }
 
 export {
   STORAGE_KEYS,
+  clearAppState,
   exportAppData,
   generateId,
   generateInviteCode,
@@ -312,6 +167,7 @@ export {
   getSession,
   getTasks,
   getUsers,
+  hydrateAppState,
   readJson,
   saveGroups,
   saveProgressLogs,

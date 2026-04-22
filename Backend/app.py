@@ -1,406 +1,209 @@
 import os
-import random
-import string
-import requests
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
-from urllib.parse import urlparse
-from dotenv import load_dotenv
+import uuid
+from flask import Flask, request, jsonify
+from flask_mail import Mail, Message
+from flask_cors import CORS
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
 
-# Load environment variables
-load_dotenv()
+app = Flask(__name__)
+CORS(app) # Enable CORS for frontend communication
 
-# --- APP INITIALIZATION ---
-app = Flask(__name__, template_folder='template')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gpms.db'
-app.config['SECRET_KEY'] = 'a_very_secure_and_production_ready_secret_key'
-db = SQLAlchemy(app)
+# --- CONFIGURATION ---
+# In a production app, use environment variables (e.g., os.environ.get('SECRET_KEY'))
+app.config['SECRET_KEY'] = 'your-super-secret-dev-key'
+app.config['SECURITY_PASSWORD_SALT'] = 'password-reset-salt-123'
 
-# --- MODELS ---
+# Flask-Mail Settings (Example using Gmail)
+# Note: For Gmail, you must use an "App Password" if 2FA is enabled.
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'your-email@gmail.com' 
+app.config['MAIL_PASSWORD'] = 'your-app-password'
+app.config['MAIL_DEFAULT_SENDER'] = 'your-email@gmail.com'
 
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(200), nullable=False)
-    github_username = db.Column(db.String(80), nullable=True) # Added for GitHub API
-    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=True)
-    
-    tasks = db.relationship('Task', backref='assignee', lazy=True)
+mail = Mail(app)
+serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
-class Group(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False)
-    invite_code = db.Column(db.String(6), unique=True, nullable=False)
-    # repo_url format: 'https://github.com/owner/repo' or 'owner/repo'
-    repo_url = db.Column(db.String(255), nullable=True)
+# Mock Database for demonstration
+mock_users = [
+    {
+        "id": "id-admin-001",
+        "email": "admin@demo.com",
+        "name": "Admin User",
+        "password": "admin123",
+        "globalRole": "admin",
+        "isActive": True,
+        "profilePicture": ""
+    },
+    {
+        "id": "id-leader-001",
+        "email": "leader@demo.com",
+        "name": "Group Leader",
+        "password": "leader123",
+        "globalRole": "student",
+        "isActive": True,
+        "profilePicture": ""
+    },
+    {
+        "id": "id-student-001",
+        "email": "saeedmuhammadabdulkadir@gmail.com",
+        "name": "Saeed",
+        "password": "student123",
+        "globalRole": "student",
+        "isActive": True,
+        "profilePicture": ""
+    }
+]
 
-    users = db.relationship('User', backref='group', lazy=True)
-    tasks = db.relationship('Task', backref='group', lazy=True)
+mock_groups = []
+mock_tasks = []
+mock_progress_logs = []
 
-class Task(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=False)
-    title = db.Column(db.String(120), nullable=False)
-    assignee_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    complexity_size = db.Column(db.String(10), nullable=False)
-    target_loc = db.Column(db.Integer, nullable=False)
-    actual_loc = db.Column(db.Integer, default=0)
-    status_color = db.Column(db.String(20), default='bg-primary')
+def get_state(current_user=None):
+    """Helper to return the full state required by the frontend hydrateAppState."""
+    return {
+        "currentUser": current_user,
+        "users": [{k: v for k, v in u.items() if k != 'password'} for u in mock_users],
+        "groups": mock_groups,
+        "tasks": mock_tasks,
+        "progressLogs": mock_progress_logs
+    }
 
-# --- LOGIC ENGINE ---
-
-class AccountabilityEngine:
-    @staticmethod
-    def get_target_loc(complexity_size):
-        """Maps complexity size to target lines of code."""
-        mapping = {'XS': 25, 'S': 100, 'M': 300, 'L': 700, 'XL': 1500}
-        return mapping.get(complexity_size.upper(), 0)
-
-    @staticmethod
-    def calculate_task_health(actual_loc, target_loc, repo_url=None):
-        """Calculates the health color of a task based on its progress."""
-        if not repo_url:
-            return 'bg-primary'  # Research/Standard Mode
-
-        if target_loc == 0:
-            return 'bg-success' if actual_loc > 0 else 'bg-primary'
-
-        ratio = actual_loc / target_loc
-        if ratio < 0.2:
-            return 'bg-danger'
-        elif ratio < 0.8:
-            return 'bg-warning'
-        else:
-            return 'bg-success'
-
-    @staticmethod
-    def fetch_github_loc(repo_url, github_username, task_title):
-        """
-        Fetches the net lines of code (additions - deletions) added by a user 
-        for a specific task using the GitHub API pagination.
-        """
-        if not repo_url or not github_username:
-            return 0, "Missing repository URL or GitHub username."
-
-        # Parse the repo_url to get owner and repo
-        path = repo_url
-        if repo_url.startswith('http'):
-            parsed_url = urlparse(repo_url)
-            path = parsed_url.path.strip('/')
-        
-        parts = path.split('/')
-        if len(parts) >= 2:
-            owner = parts[-2]
-            repo = parts[-1]
-            if repo.endswith('.git'):
-                repo = repo[:-4]
-        else:
-            return 0, "Invalid repository URL format. Expected 'owner/repo' or full GitHub URL."
-
-        base_api_url = f"https://api.github.com/repos/{owner}/{repo}"
-        commits_url = f"{base_api_url}/commits?author={github_username}&per_page=100"
-        
-        headers = {'Accept': 'application/vnd.github.v3+json'}
-        github_token = os.environ.get('GITHUB_TOKEN')
-        
-        if github_token:
-            headers['Authorization'] = f'token {github_token}'
-        else:
-            print("WARNING: GITHUB_TOKEN environment variable not set. API rate limit will be severely restricted (60 req/hr).")
-
-        try:
-            all_commits = []
-            page = 1
-            
-            # 1. Fetch ALL commits using pagination
-            while True:
-                paginated_url = f"{commits_url}&page={page}"
-                response = requests.get(paginated_url, headers=headers, timeout=10)
-                
-                if response.status_code == 404:
-                    return 0, f"Repository not found or API endpoint invalid: {owner}/{repo}"
-                elif response.status_code in (403, 429):
-                    return 0, "GitHub API rate limit exceeded."
-                elif response.status_code != 200:
-                    return 0, f"GitHub API error: {response.status_code} - {response.text}"
-                    
-                page_commits = response.json()
-                if not isinstance(page_commits, list):
-                     return 0, "Unexpected response from GitHub API."
-                     
-                if not page_commits:
-                    break # No more commits
-                    
-                all_commits.extend(page_commits)
-                page += 1
-
-            if not all_commits:
-                return 0, "No commits found for this user in the repository."
-
-            net_loc = 0
-            task_title_lower = task_title.lower().strip()
-            
-            # 2. Filter commits by task title and calculate net LOC
-            for commit in all_commits:
-                commit_msg = commit.get('commit', {}).get('message', '').lower().strip()
-                
-                # Check if the commit message contains the task title
-                if task_title_lower in commit_msg:
-                    commit_sha = commit.get('sha')
-                    if not commit_sha: continue
-                    
-                    single_commit_url = f"{base_api_url}/commits/{commit_sha}"
-                    commit_resp = requests.get(single_commit_url, headers=headers, timeout=10)
-                    
-                    if commit_resp.status_code == 200:
-                        commit_data = commit_resp.json()
-                        stats = commit_data.get('stats', {})
-                        additions = stats.get('additions', 0)
-                        deletions = stats.get('deletions', 0)
-                        
-                        # Calculate net lines of code
-                        net_loc += max(0, additions - deletions)
-                    elif commit_resp.status_code in (403, 429):
-                         return net_loc, "Rate limit hit while fetching individual commits. Partial data saved."
-
-            return net_loc, None
-            
-        except requests.exceptions.Timeout:
-            return 0, "Connection to GitHub API timed out."
-        except requests.exceptions.RequestException as e:
-            return 0, f"Network error when connecting to GitHub: {str(e)}"
-
-# --- ROUTES ---
-
-# Helper to check if a user is valid
-def get_current_user():
-    if 'user_id' not in session:
-        return None
-    user = db.session.get(User, session['user_id'])
-    if not user:
-        session.pop('user_id', None)
-    return user
-
-
-@app.route('/register', methods=['GET', 'POST'])
+@app.route('/api/register', methods=['POST'])
 def register():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        github_username = request.form.get('github_username')
-
-        if not username or not password or not github_username:
-            flash('Username, password, and GitHub username are required.', 'danger')
-            return redirect(url_for('register'))
-
-        if User.query.filter_by(username=username).first():
-            flash('Username is already taken.', 'warning')
-            return redirect(url_for('register'))
-
-        hashed_password = generate_password_hash(password)
-        new_user = User(username=username, password_hash=hashed_password, github_username=github_username)
-        db.session.add(new_user)
-        db.session.commit()
-
-        session['user_id'] = new_user.id
-        flash('Registration successful! Welcome.', 'success')
-        return redirect(url_for('onboarding'))
+    data = request.get_json()
+    email = data.get('email', '').lower().strip()
     
-    return render_template('register.html')
+    if any(u['email'] == email for u in mock_users):
+        return jsonify({"error": "Email already registered."}), 400
+    
+    new_user = {
+        "id": f"id-{uuid.uuid4()}",
+        "name": data.get('name'),
+        "email": email,
+        "password": data.get('password'),
+        "profilePicture": data.get('profilePicture', ''),
+        "githubUsername": data.get('githubUsername', ''),
+        "globalRole": "student",
+        "isActive": True
+    }
+    mock_users.append(new_user)
+    
+    token = serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
+    user_data = {k: v for k, v in new_user.items() if k != 'password'}
+    
+    return jsonify({
+        "token": token,
+        "state": get_state(user_data)
+    }), 201
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/api/login', methods=['POST'])
 def login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
+    data = request.get_json()
+    email = data.get('email', '').lower().strip()
+    password = data.get('password')
+    
+    user = next((u for u in mock_users if u['email'] == email and u['password'] == password), None)
+    
+    if not user:
+        return jsonify({"error": "Invalid email or password."}), 401
+    
+    if not user.get('isActive', True):
+        return jsonify({"error": "Account is inactive."}), 403
+        
+    token = serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
+    user_data = {k: v for k, v in user.items() if k != 'password'}
+    
+    return jsonify({
+        "token": token,
+        "state": get_state(user_data)
+    }), 200
 
-        if user and check_password_hash(user.password_hash, password):
-            session['user_id'] = user.id
-            flash('Logged in successfully.', 'success')
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid username or password.', 'danger')
-            return redirect(url_for('login'))
+@app.route('/api/bootstrap', methods=['GET'])
+def bootstrap():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    token = auth_header.split(" ")[1]
+    try:
+        email = serializer.loads(token, salt=app.config['SECURITY_PASSWORD_SALT'], max_age=86400)
+    except:
+        return jsonify({"error": "Invalid session"}), 401
+        
+    user = next((u for u in mock_users if u['email'] == email), None)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+        
+    user_data = {k: v for k, v in user.items() if k != 'password'}
+    return jsonify({
+        "state": get_state(user_data)
+    }), 200
 
-    return render_template('login.html')
-
-@app.route('/logout')
+@app.route('/api/logout', methods=['POST'])
 def logout():
-    session.pop('user_id', None)
-    flash('You have been logged out.', 'info')
-    return redirect(url_for('login'))
+    return jsonify({"message": "Logged out successfully."}), 200
 
-@app.route('/onboarding', methods=['GET'])
-def onboarding():
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('login'))
-    
-    if user.group_id:
-        return redirect(url_for('dashboard'))
+@app.route('/api/forgot-password', methods=['POST'])
+def forgot_password():
+    data = request.get_json()
+    email = data.get('email', '').lower().strip()
 
-    return render_template('onboarding.html')
+    # 1. Check if user exists
+    user = next((u for u in mock_users if u['email'] == email), None)
 
-@app.route('/create_group', methods=['POST'])
-def create_group():
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('login'))
-
-    group_name = request.form.get('name')
-    repo_url = request.form.get('repo_url')
-
-    if not group_name:
-        flash('Group name is required.', 'danger')
-        return redirect(url_for('onboarding'))
+    if user:
+        # 2. Generate secure token (expires in 30 minutes)
+        token = serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
         
-    if repo_url and 'github.com' not in repo_url.lower():
-        flash('Please provide a valid GitHub repository URL.', 'danger')
-        return redirect(url_for('onboarding'))
+        # 3. Construct reset link (Pointing to your frontend port, usually 8000 or 5500)
+        frontend_url = "http://127.0.0.1:8000" 
+        reset_url = f"{frontend_url}/reset-password.html?token={token}"
 
-    invite_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    while Group.query.filter_by(invite_code=invite_code).first():
-        invite_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        # 4. Send the email
+        msg = Message("Taskly — Password Reset Request", recipients=[email])
+        msg.body = f"""Hello {user['name']},
 
-    new_group = Group(name=group_name, invite_code=invite_code, repo_url=repo_url)
-    db.session.add(new_group)
-    db.session.commit() 
+You requested to reset your Taskly password. Please click the link below to set a new one:
 
-    user.group_id = new_group.id
-    db.session.commit()
+{reset_url}
 
-    flash(f'Group "{group_name}" created! Your invite code is {invite_code}', 'success')
-    return redirect(url_for('dashboard'))
+This link will expire in 30 minutes. If you did not make this request, please ignore this email.
 
-@app.route('/join_group', methods=['POST'])
-def join_group():
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('login'))
+Best regards,
+The Taskly Team
+"""
+        try:
+            mail.send(msg)
+        except Exception as e:
+            print(f"Mail Error: {e}")
+            return jsonify({"error": "Unable to send email at this time."}), 500
 
-    invite_code = request.form.get('invite_code')
-    group = Group.query.filter_by(invite_code=invite_code).first()
+    # We return 200 even if the user wasn't found to prevent "Email Enumeration" attacks
+    return jsonify({"message": "If that email is registered, a reset link has been sent."}), 200
 
-    if not group:
-        flash('Invalid invite code.', 'danger')
-        return redirect(url_for('onboarding'))
+@app.route('/api/reset-password', methods=['POST'])
+def reset_password():
+    data = request.get_json()
+    token = data.get('token')
+    new_password = data.get('password')
 
-    user.group_id = group.id
-    db.session.commit()
+    try:
+        # Verify token and expiration (1800 seconds = 30 minutes)
+        email = serializer.loads(token, salt=app.config['SECURITY_PASSWORD_SALT'], max_age=1800)
+    except (SignatureExpired, BadTimeSignature):
+        return jsonify({"error": "The reset link is invalid or has expired."}), 400
 
-    flash(f'Successfully joined group "{group.name}"!', 'success')
-    return redirect(url_for('dashboard'))
-
-@app.route('/')
-@app.route('/dashboard')
-def dashboard():
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('login'))
-
-    if not user.group_id:
-        return redirect(url_for('onboarding'))
-
-    group = user.group
-    team_members = group.users
-    tasks = group.tasks
-
-    total_actual_loc = sum(task.actual_loc for task in tasks)
-    total_target_loc = sum(task.target_loc for task in tasks)
-    group_completion_rate = (total_actual_loc / total_target_loc * 100) if total_target_loc > 0 else 0
-
-    return render_template('dashboard.html', 
-                           group=group, 
-                           team_members=team_members, 
-                           tasks=tasks,
-                           group_completion_rate=group_completion_rate)
-
-@app.route('/task/create', methods=['POST'])
-def create_task():
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('login'))
-
-    if not user.group_id:
-        return redirect(url_for('onboarding'))
-
-    title = request.form.get('title')
-    complexity = request.form.get('complexity_size')
-    assignee_id = request.form.get('assignee_id')
-
-    if not all([title, complexity, assignee_id]):
-        flash('All fields are required to create a task.', 'danger')
-        return redirect(url_for('dashboard'))
-
-    target_loc = AccountabilityEngine.get_target_loc(complexity)
+    # Update user password in DB
+    user = next((u for u in mock_users if u['email'] == email), None)
+    if user:
+        user['password'] = new_password
+        print(f"Password updated for {email}")
+        return jsonify({"message": "Password updated successfully."}), 200
     
-    new_task = Task(
-        group_id=user.group_id,
-        title=title,
-        assignee_id=int(assignee_id),
-        complexity_size=complexity,
-        target_loc=target_loc
-    )
-    db.session.add(new_task)
-    db.session.commit()
+    return jsonify({"error": "User not found."}), 404
 
-    flash('New task has been created.', 'success')
-    return redirect(url_for('dashboard'))
-
-@app.route('/task/sync/<int:task_id>', methods=['POST'])
-def sync_task(task_id):
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('login'))
-
-    task = db.session.get(Task, task_id)
-    if not task or task.group_id != user.group_id:
-        flash('Task not found or you do not have permission to sync it.', 'danger')
-        return redirect(url_for('dashboard'))
-
-    assignee = task.assignee
-    group = task.group
-
-    # Strict validation before syncing
-    if not assignee or not assignee.github_username:
-        flash(f'Cannot sync task: Assignee missing GitHub username.', 'danger')
-        return redirect(url_for('dashboard'))
-        
-    if not group or not group.repo_url:
-        flash(f'Cannot sync task: Group is missing a Repository URL.', 'danger')
-        return redirect(url_for('dashboard'))
-
-    # Call the real GitHub API, now passing the task title
-    net_loc, error = AccountabilityEngine.fetch_github_loc(group.repo_url, assignee.github_username, task.title)
-
-    if error:
-        # If there's an error but we still calculated some LOC (e.g. rate limit hit mid-way), 
-        # we can decide to save it or just warn. We'll warn and save what we have.
-        if net_loc > 0:
-             flash(f'GitHub Sync Warning: {error}', 'warning')
-        else:
-             flash(f'GitHub Sync Error: {error}', 'danger')
-             return redirect(url_for('dashboard'))
-
-    # Update actual_loc with exact net LOC
-    task.actual_loc = net_loc
-    
-    # Calculate new health status
-    task.status_color = AccountabilityEngine.calculate_task_health(
-        task.actual_loc, 
-        task.target_loc, 
-        group.repo_url
-    )
-    
-    db.session.commit()
-    flash(f'Successfully synced with GitHub. Found {net_loc} net lines added by {assignee.github_username} for task "{task.title}".', 'success')
-
-    return redirect(url_for('dashboard'))
-
-# --- MAIN EXECUTION ---
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)
+    # Run on port 5000 as defined in your frontend api.js
+    app.run(port=5000, debug=True)

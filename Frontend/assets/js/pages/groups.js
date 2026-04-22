@@ -14,7 +14,7 @@ import {
 } from "../groups.js";
 import { formatDate, createEmptyState, escapeHtml, getAvatarMarkup, renderAppChrome, renderFlash } from "../ui.js";
 
-const user = bootstrapProtectedPage({ pageKey: "groups" });
+const user = await bootstrapProtectedPage({ pageKey: "groups" });
 
 if (user) {
   const groupsList = document.querySelector("#groups-list");
@@ -150,14 +150,14 @@ if (user) {
     }
 
     document.querySelectorAll(".role-form").forEach((formElement) => {
-      formElement.addEventListener("submit", (event) => {
+      formElement.addEventListener("submit", async (event) => {
         event.preventDefault();
         const groupId = formElement.dataset.groupId;
         const userId = formElement.dataset.userId;
         const role = new FormData(formElement).get("role");
 
         try {
-          updateMemberRole({ groupId, targetUserId: userId, role }, getCurrentUser() || user);
+          await updateMemberRole({ groupId, targetUserId: userId, role }, getCurrentUser() || user);
           showInlineFlash("Member role updated.", "success");
           refreshGroupsView();
         } catch (error) {
@@ -167,10 +167,10 @@ if (user) {
     });
 
     document.querySelectorAll("[data-action='leave']").forEach((button) => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", async () => {
         if (confirm("Are you sure you want to leave this group?")) {
           try {
-            leaveGroup({ groupId: button.dataset.groupId }, getCurrentUser() || user);
+            await leaveGroup({ groupId: button.dataset.groupId }, getCurrentUser() || user);
             showInlineFlash("You have left the group.", "success");
             refreshGroupsView({ refreshChrome: true });
           } catch (error) {
@@ -181,11 +181,11 @@ if (user) {
     });
 
     document.querySelectorAll("[data-action='delete-group']").forEach((button) => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", async () => {
         const confirmMsg = "Are you sure? This will permanently delete the group and all associated group tasks.";
         if (confirm(confirmMsg)) {
           try {
-            deleteGroup({ groupId: button.dataset.groupId }, getCurrentUser() || user);
+            await deleteGroup({ groupId: button.dataset.groupId }, getCurrentUser() || user);
             showInlineFlash("Group deleted successfully.", "success");
             refreshGroupsView({ refreshChrome: true });
           } catch (error) {
@@ -196,11 +196,11 @@ if (user) {
     });
   }
 
-  createForm?.addEventListener("submit", (event) => {
+  createForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
       const groupName = new FormData(createForm).get("groupName");
-      createGroup(groupName, getCurrentUser() || user);
+      await createGroup(groupName, getCurrentUser() || user);
       createForm.reset();
       showInlineFlash("Group created successfully.", "success");
       refreshGroupsView({ refreshChrome: true });
@@ -209,11 +209,11 @@ if (user) {
     }
   });
 
-  joinForm?.addEventListener("submit", (event) => {
+  joinForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
       const inviteCode = new FormData(joinForm).get("inviteCode");
-      joinGroupByCode(inviteCode, getCurrentUser() || user);
+      await joinGroupByCode(inviteCode, getCurrentUser() || user);
       joinForm.reset();
       showInlineFlash("You joined the group successfully.", "success");
       refreshGroupsView({ refreshChrome: true });

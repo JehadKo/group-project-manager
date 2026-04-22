@@ -55,6 +55,8 @@ No backend framework or database is required for this version.
 - `index.html` - landing page
 - `login.html` - login page
 - `register.html` - registration page
+- `forgot-password.html` - password recovery page
+- `reset-password.html` - set new password page
 - `dashboard.html` - main dashboard
 - `groups.html` - group creation, joining, and role management
 - `tasks.html` - task creation and task management
@@ -69,6 +71,8 @@ Smester_Project/
 |- index.html
 |- login.html
 |- register.html
+|- forgot-password.html
+|- reset-password.html
 |- dashboard.html
 |- groups.html
 |- tasks.html
@@ -115,6 +119,17 @@ python -m http.server 8000
 ```
 
 Then open `http://localhost:8000`.
+
+## Backend Setup (Optional for Email)
+
+To enable real password reset emails, you must run the Flask backend:
+
+1. Install dependencies: `pip install flask flask-mail flask-cors itsdangerous`
+2. Navigate to the `Backend` folder.
+3. Update `app.py` with your SMTP credentials (e.g., Gmail App Password).
+4. Run the server: `python app.py`
+
+The frontend is pre-configured in `assets/js/api.js` to connect to `http://127.0.0.1:5000/api`.
 
 ## Demo Accounts
 

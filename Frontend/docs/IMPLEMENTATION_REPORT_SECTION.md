@@ -96,7 +96,7 @@ Although this project is a prototype, several non-functional requirements were c
 ### Security
 - Basic role-based access logic is enforced in the interface.
 - Different pages and actions are restricted depending on user type.
-- This version does not provide production-level security because it is intended for prototype demonstration only.
+- The system uses CORS protection to restrict API access to trusted origins.
 
 ### Reliability
 - Data remains available after page refresh because it is saved in `localStorage`.

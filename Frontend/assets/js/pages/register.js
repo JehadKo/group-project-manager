@@ -2,7 +2,7 @@ import { bootstrapPublicPage } from "../app.js";
 import { registerUser, setFlash } from "../auth.js";
 import { escapeHtml } from "../ui.js";
 
-bootstrapPublicPage();
+await bootstrapPublicPage();
 
 const form = document.querySelector("#register-form");
 const preview = document.querySelector("#profile-preview");
@@ -89,13 +89,13 @@ fileInput?.addEventListener("change", () => {
   reader.readAsDataURL(file);
 });
 
-form?.addEventListener("submit", (event) => {
+form?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(form);
   const btn = document.querySelector("#submit-btn");
 
   try {
-    registerUser({
+    await registerUser({
       name: formData.get("name"),
       email: formData.get("email"),
       password: formData.get("password"),
@@ -103,7 +103,7 @@ form?.addEventListener("submit", (event) => {
     });
 
     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg> Account created!`;
-    btn.style.background = "var(--teal-dark)";
+    btn.style.background = "var(--primary)";
 
     setTimeout(() => {
       setFlash("Account created successfully. You are now logged in.", "success");

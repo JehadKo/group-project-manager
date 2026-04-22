@@ -16,7 +16,7 @@ import {
 } from "../tasks.js";
 import { createEmptyState, createTaskCard, escapeHtml, getAvatarMarkup, formatDateTime, renderFlash } from "../ui.js";
 
-const user = bootstrapProtectedPage({ pageKey: "tasks" });
+const user = await bootstrapProtectedPage({ pageKey: "tasks" });
 
 if (user) {
   const form = document.querySelector("#task-form");
@@ -333,10 +333,10 @@ if (user) {
     });
 
     document.querySelectorAll("[data-action='delete']").forEach((button) => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", async () => {
         try {
           const taskId = button.dataset.taskId;
-          deleteTask(taskId, user);
+          await deleteTask(taskId, user);
 
           if (editingTaskId === taskId) {
             resetForm();
@@ -361,11 +361,11 @@ if (user) {
     });
 
     document.querySelectorAll(".status-update-form").forEach((statusForm) => {
-      statusForm.addEventListener("submit", (event) => {
+      statusForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         const data = new FormData(statusForm);
         try {
-          updateTaskStatus(
+          await updateTaskStatus(
             statusForm.dataset.taskId,
             {
               status: data.get("status"),
@@ -410,14 +410,14 @@ if (user) {
   document.querySelector("#close-drawer")?.addEventListener("click", closeDrawer);
   drawerBackdrop?.addEventListener("click", closeDrawer);
 
-  commentForm?.addEventListener("submit", (e) => {
+  commentForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const text = commentInput.value.trim();
     if (!text || !activeDiscussionTaskId) return;
 
     try {
       readBySimulation.delete(activeDiscussionTaskId);
-      addTaskComment(activeDiscussionTaskId, text, user);
+      await addTaskComment(activeDiscussionTaskId, text, user);
       const updatedTask = getTaskById(activeDiscussionTaskId);
       renderComments(updatedTask);
       commentForm.reset();
@@ -432,7 +432,7 @@ if (user) {
     }
   });
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(form);
     const payload = {
@@ -453,10 +453,10 @@ if (user) {
 
     try {
       if (editingTaskId) {
-        updateTask(editingTaskId, payload, user);
+        await updateTask(editingTaskId, payload, user);
         showInlineFlash("Task updated successfully.", "success");
       } else {
-        createTask(payload, user);
+        await createTask(payload, user);
         showInlineFlash("Task created successfully.", "success");
       }
       resetForm();

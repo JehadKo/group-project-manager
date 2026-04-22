@@ -1,11 +1,20 @@
 import {
+  deleteProfileWithApi,
+  fetchBootstrap,
+  loginWithApi,
+  logoutWithApi,
+  registerWithApi,
+  requestPasswordResetWithApi,
+  resetPasswordWithApi,
+  updateProfileWithApi,
+} from "./api.js";
+import {
+  STORAGE_KEYS,
+  clearAppState,
   getSession,
   getUsers,
+  hydrateAppState,
   saveSession,
-  updateUsers,
-  updateGroups,
-  updateTasks,
-  generateId,
 } from "./storage.js";
 
 const FLASH_KEY = "sgpm_flash";
@@ -37,6 +46,7 @@ function getCurrentUser() {
   if (!session?.userId) {
     return null;
   }
+
   return getUsers().find((user) => user.id === session.userId) ?? null;
 }
 
@@ -44,149 +54,145 @@ function getUserById(userId) {
   return getUsers().find((user) => user.id === userId) ?? null;
 }
 
-function registerUser({ name, email, password, profilePicture = "", globalRole = "student" }) {
-  if (!name.trim() || !email.trim() || !password.trim()) {
-    throw new Error("Please fill in your name, email, and password.");
-  }
-
-  const users = getUsers();
-  const normalizedEmail = normalizeEmail(email);
-  if (users.some((user) => normalizeEmail(user.email) === normalizedEmail)) {
-    throw new Error("An account with this email already exists.");
-  }
-
-  const newUser = {
-    id: generateId("user"),
-    name: name.trim(),
-    email: normalizedEmail,
-    password: password.trim(),
-    profilePicture,
-    globalRole,
-    joinedGroupIds: [],
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  };
-
-  updateUsers((current) => [...current, newUser]);
-  saveSession({ userId: newUser.id, loggedInAt: new Date().toISOString() });
-  return newUser;
-}
-
-function loginUser({ email, password, rememberMe = false }) {
-  const normalizedEmail = normalizeEmail(email);
-  const user = getUsers().find((entry) => normalizeEmail(entry.email) === normalizedEmail);
-
-  if (!user || user.password !== password.trim()) {
-    throw new Error("Invalid email or password.");
-  }
-
-  if (!user.isActive) {
-    throw new Error("This account is currently inactive. Please contact the system administrator.");
+function persistSessionState({ currentUser, token }, rememberMe = false) {
+  if (!currentUser?.id || !token) {
+    throw new Error("Unable to persist the current session.");
   }
 
   saveSession(
-    { userId: user.id, loggedInAt: new Date().toISOString() },
+    {
+      userId: currentUser.id,
+      token,
+      loggedInAt: new Date().toISOString(),
+    },
     rememberMe
   );
-  return user;
 }
 
-function logoutUser() {
+async function registerUser({ name, email, password, profilePicture = "", githubUsername = "" }) {
+  const response = await registerWithApi({
+    name,
+    email,
+    password,
+    profilePicture,
+    githubUsername,
+  });
+
+  hydrateAppState(response.state);
+  persistSessionState(
+    {
+      currentUser: response.state?.currentUser,
+      token: response.token,
+    },
+    false
+  );
+
+  return response.state.currentUser;
+}
+
+async function loginUser({ email, password, rememberMe = false }) {
+  const response = await loginWithApi({
+    email: normalizeEmail(email),
+    password,
+  });
+
+  hydrateAppState(response.state);
+  persistSessionState(
+    {
+      currentUser: response.state?.currentUser,
+      token: response.token,
+    },
+    rememberMe
+  );
+
+  return response.state.currentUser;
+}
+
+async function syncSessionState() {
+  const session = getSession();
+  if (!session?.token) {
+    return null;
+  }
+
+  const response = await fetchBootstrap();
+  hydrateAppState(response.state);
+
+  const rememberMe = Boolean(localStorage.getItem(STORAGE_KEYS.session));
+  saveSession(
+    {
+      ...session,
+      userId: response.state?.currentUser?.id || session.userId,
+    },
+    rememberMe
+  );
+
+  return response.state?.currentUser ?? null;
+}
+
+async function logoutUser({ skipApi = false } = {}) {
+  try {
+    if (!skipApi) {
+      await logoutWithApi();
+    }
+  } catch (error) {
+    // Keep local logout reliable even if the backend is unreachable.
+  }
+
+  clearAppState();
   saveSession(null);
 }
 
-function updateCurrentUserProfile(userId, updates) {
-  let updatedUser = null;
+async function requestPasswordReset(email) {
+  await requestPasswordResetWithApi({ email: normalizeEmail(email) });
+}
 
-  updateUsers((users) =>
-    users.map((user) => {
-      if (user.id !== userId) {
-        return user;
-      }
+async function resetPassword(token, password) {
+  await resetPasswordWithApi({ token, password });
+}
 
-      updatedUser = {
-        ...user,
-        name: updates.name?.trim() || user.name,
-        profilePicture: updates.profilePicture ?? user.profilePicture,
-      };
-      return updatedUser;
-    })
-  );
-
-  if (!updatedUser) {
+async function updateCurrentUserProfile(userId, updates) {
+  const currentUser = getCurrentUser();
+  if (!currentUser || currentUser.id !== userId) {
     throw new Error("Unable to update the profile right now.");
   }
 
-  return updatedUser;
+  const response = await updateProfileWithApi({
+    name: updates.name?.trim() || currentUser.name,
+    profilePicture: updates.profilePicture ?? currentUser.profilePicture ?? "",
+  });
+
+  hydrateAppState(response.state);
+  return response.state.currentUser;
 }
 
-function deleteUserAccount(userId) {
-  // 1. Remove the user from the global users list
-  updateUsers((current) => current.filter((user) => user.id !== userId));
+async function deleteUserAccount(userId) {
+  const currentUser = getCurrentUser();
+  if (!currentUser || currentUser.id !== userId) {
+    throw new Error("Unable to delete the profile right now.");
+  }
 
-  // 2. Handle group ownership and membership
-  updateGroups((current) =>
-    current
-      .map((group) => {
-        const isLeader = group.leaderId === userId;
-        const remainingMembers = group.memberIds.filter((id) => id !== userId);
-
-        if (isLeader) {
-          // If the leader is the only member, delete the group entirely
-          if (remainingMembers.length === 0) return null;
-
-          // Otherwise, promote the next available member to leader
-          const nextLeaderId = remainingMembers[0];
-          const nextRoleMap = { ...group.roleMap };
-          delete nextRoleMap[userId];
-          nextRoleMap[nextLeaderId] = "leader";
-
-          return {
-            ...group,
-            leaderId: nextLeaderId,
-            memberIds: remainingMembers,
-            roleMap: nextRoleMap,
-          };
-        }
-
-        // For non-leader memberships, just remove the user normally
-        return {
-          ...group,
-          memberIds: remainingMembers,
-          roleMap: Object.fromEntries(
-            Object.entries(group.roleMap ?? {}).filter(([id]) => id !== userId)
-          ),
-        };
-      })
-      .filter(Boolean) // Remove the groups that returned null (deleted)
-  );
-
-  // 3. Cleanup tasks: Delete their personal tasks and unassign them from group tasks
-  updateTasks((current) =>
-    current
-      .filter((task) => !(task.isPersonal && task.createdBy === userId))
-      .map((task) => (task.assignedTo === userId ? { ...task, assignedTo: null } : task))
-  );
-
-  logoutUser();
+  await deleteProfileWithApi();
+  clearAppState();
+  saveSession(null);
 }
 
 function ensureAuthenticated() {
-  const user = getCurrentUser();
-  if (!user) {
+  const session = getSession();
+  if (!session?.token) {
     setFlash("Please log in to continue.", "info");
     window.location.href = "login.html";
     return null;
   }
 
-  if (!user.isActive) {
-    logoutUser();
+  const user = getCurrentUser();
+  if (user && user.isActive === false) {
+    saveSession(null);
     setFlash("Your account is inactive. Please contact the administrator.", "error");
     window.location.href = "login.html";
     return null;
   }
 
-  return user;
+  return user || { id: session.userId, token: session.token };
 }
 
 function ensureRole(user, allowedRoles = []) {
@@ -218,6 +224,9 @@ export {
   loginUser,
   logoutUser,
   registerUser,
+  resetPassword,
+  requestPasswordReset,
   setFlash,
+  syncSessionState,
   updateCurrentUserProfile,
 };

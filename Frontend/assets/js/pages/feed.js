@@ -5,7 +5,7 @@ import { getProgressLogs, STORAGE_KEYS } from "../storage.js";
 import { getTaskAssigneeName, getTaskAssigneeRole, getUserVisibleTasks, getTaskById } from "../tasks.js";
 import { createEmptyState, createTaskCard, formatDateTime, escapeHtml, renderAppChrome } from "../ui.js";
 
-let user = bootstrapProtectedPage({ pageKey: "feed" });
+let user = await bootstrapProtectedPage({ pageKey: "feed" });
 
 if (user) {
   const list = document.querySelector("#feed-list");

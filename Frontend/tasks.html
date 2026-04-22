@@ -4,1416 +4,895 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tasks — Taskly</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
 
     :root {
-      --ink: #0d1f1a;
-      --ink-soft: #1e3530;
-      --paper: #f2f8f5;
-      --teal: #1a9e74;
-      --teal-dark: #127a59;
-      --teal-light: #d0f2e8;
-      --teal-mid: #a8e6d0;
-      --blue: #1478b0;
-      --blue-light: #dceef9;
-      --mint: #34d9a5;
-      --muted: #5a7a72;
-      --border: #c8e2d9;
-      --white: #ffffff;
-      --red: #d64040;
-      --red-light: #fde8e8;
-      --amber: #e0900a;
-      --amber-light: #fef3dc;
+      --ink: #0d0d0d; --paper: #f5f2ec; --cream: #ede9e0; --surface: #ffffff;
+      --accent: #c8502a; --accent-light: #e8724f; --accent-glow: rgba(200,80,42,0.12);
+      --gold: #c9a84c; --gold-light: rgba(201,168,76,0.14);
+      --blue: #2563ba; --blue-light: #dbeafe;
+      --green: #1a7a4a; --green-light: #dcfce7;
+      --red: #c0392b; --red-light: #ffe9e9;
+      --amber: #b45309; --amber-light: #fef3c7;
+      --muted: #7a7468; --muted-2: #a09890;
+      --border: rgba(13,13,13,0.08); --border-strong: rgba(13,13,13,0.14);
       --sidebar-w: 240px;
-      --radius: 16px;
-      --radius-sm: 10px;
-      --shadow: 0 4px 24px rgba(26,158,116,.08);
-      --shadow-lg: 0 16px 48px rgba(26,158,116,.13);
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-body: 'DM Sans', sans-serif;
+      --radius: 14px; --radius-sm: 9px;
+      --trans: 0.2s cubic-bezier(0.4,0,0.2,1);
+      --shadow-sm: 0 1px 4px rgba(13,13,13,0.06);
+      --shadow-md: 0 4px 18px rgba(13,13,13,0.08);
+      --shadow-lg: 0 12px 40px rgba(13,13,13,0.12);
     }
 
-    html, body { height: 100%; }
-
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--paper);
-      color: var(--ink);
-      font-size: 15px;
-      line-height: 1.6;
-      display: flex; flex-direction: column;
-    }
-
-    /* ── KEYFRAMES ── */
-    @keyframes fadeUp   { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
-    @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
-    @keyframes slideInLeft  { from { opacity:0; transform:translateX(-22px); } to { opacity:1; transform:none; } }
-    @keyframes slideInRight { from { opacity:0; transform:translateX(22px); } to { opacity:1; transform:none; } }
-    @keyframes popIn    { 0%{transform:scale(.8) translateY(8px);opacity:0;} 70%{transform:scale(1.04);} 100%{transform:scale(1) translateY(0);opacity:1;} }
-    @keyframes pulse    { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.4;transform:scale(1.55);} }
-    @keyframes shimmer  { 0%{background-position:-200% center;} 100%{background-position:200% center;} }
-    @keyframes ripple   { 0%{transform:scale(1);opacity:.35;} 100%{transform:scale(2.6);opacity:0;} }
-    @keyframes checkDraw{ from{stroke-dashoffset:30;opacity:0;} to{stroke-dashoffset:0;opacity:1;} }
-    @keyframes barGrow  { from{transform:scaleX(0);} to{transform:scaleX(1);} }
-    @keyframes taskSlideIn { from{opacity:0;transform:translateX(-14px);} to{opacity:1;transform:none;} }
-    @keyframes spin     { to { transform: rotate(360deg); } }
-
-    /* ── SIDEBAR ── */
-    .sidebar {
-      position: fixed; top:0; left:0; bottom:0;
-      width: var(--sidebar-w);
-      background: var(--ink);
-      display: flex; flex-direction: column;
-      z-index: 200;
-      animation: slideInLeft .55s cubic-bezier(.22,1,.36,1) both;
-    }
-
-    .sidebar-logo {
-      display: flex; align-items: center; gap: 10px;
-      padding: 1.4rem 1.4rem 1rem;
-      text-decoration: none;
-      border-bottom: 1px solid rgba(255,255,255,.07);
-      margin-bottom: .5rem;
-    }
-
-    .sidebar-logo-icon {
-      width: 32px; height: 32px; border-radius: 9px;
-      background: var(--teal);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; transition: transform .3s cubic-bezier(.34,1.56,.64,1);
-    }
-
-    .sidebar-logo:hover .sidebar-logo-icon { transform: rotate(-12deg) scale(1.1); }
-
-    .sidebar-logo-text {
-      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: #fff;
-    }
-    .sidebar-logo-text span { color: var(--mint); }
-
-    .sidebar-section-label {
-      font-size: .63rem; font-weight: 700; letter-spacing: .1em;
-      text-transform: uppercase; color: rgba(255,255,255,.28);
-      padding: .8rem 1.4rem .3rem;
-    }
-
-    .sidebar-nav { flex:1; overflow-y:auto; padding-bottom:1rem; }
-
-    .sidebar-link {
-      display: flex; align-items: center; gap: .75rem;
-      padding: .6rem 1.4rem;
-      color: rgba(255,255,255,.5);
-      text-decoration: none; font-size: .88rem;
-      transition: color .15s, background .15s; position: relative;
-    }
-
-    .sidebar-link svg { width:16px; height:16px; flex-shrink:0; }
-    .sidebar-link:hover { color:#fff; background:rgba(255,255,255,.05); }
-    .sidebar-link.active { color:#fff; background:rgba(52,217,165,.12); }
-    .sidebar-link.active::before {
-      content:''; position:absolute; left:0; top:4px; bottom:4px;
-      width:3px; background:var(--mint); border-radius:0 2px 2px 0;
-    }
-
-    .sidebar-badge {
-      margin-left:auto; background:var(--teal); color:#fff;
-      font-size:.63rem; font-weight:700; padding:.1rem .42rem; border-radius:50px;
-    }
-
-    .sidebar-footer {
-      padding:1rem 1.4rem; border-top:1px solid rgba(255,255,255,.07);
-    }
-
-    .sidebar-user { display:flex; align-items:center; gap:.7rem; }
-
-    .sidebar-user-avatar {
-      width:32px; height:32px; border-radius:50%;
-      background:var(--ink-soft); border:2px solid rgba(255,255,255,.15);
-      display:flex; align-items:center; justify-content:center;
-      font-size:.75rem; font-weight:700; color:var(--mint); flex-shrink:0;
-    }
-
-    .sidebar-user-name { font-size:.82rem; font-weight:500; color:#fff; }
-    .sidebar-user-role { font-size:.7rem; color:rgba(255,255,255,.4); }
-
-    /* ── LAYOUT ── */
-    .layout { margin-left:var(--sidebar-w); display:flex; flex-direction:column; min-height:100vh; }
-
-    /* ── TOPBAR ── */
-    .topbar {
-      background: rgba(242,248,245,.92);
-      backdrop-filter: blur(14px);
-      border-bottom: 1px solid var(--border);
-      padding: .9rem 2rem;
-      display: flex; align-items:center; justify-content:space-between;
-      position: sticky; top:0; z-index:100;
-      animation: fadeIn .4s .2s both;
-    }
-
-    .topbar-breadcrumb {
-      display:flex; align-items:center; gap:.5rem;
-      font-size:.82rem; color:var(--muted);
-    }
-
-    .topbar-breadcrumb strong { color:var(--ink); font-weight:600; }
-    .topbar-breadcrumb span { opacity:.4; }
-
-    .topbar-actions { display:flex; gap:.6rem; align-items:center; }
-
-    .mobile-nav-toggle {
-      display:none;
-      align-items:center;
-      justify-content:center;
-      width:42px;
-      height:42px;
-      border-radius:12px;
-      border:1.5px solid var(--border);
-      background:var(--white);
-      color:var(--ink);
-      flex-shrink:0;
-    }
-
-    .mobile-nav-toggle svg { width:18px; height:18px; }
-
-    .mobile-nav-backdrop {
-      position:fixed;
-      inset:0;
-      background:rgba(13,31,26,.42);
-      opacity:0;
-      pointer-events:none;
-      transition:opacity .22s ease;
-      z-index:190;
-    }
-
-    /* ── BUTTONS ── */
-    .btn {
-      display:inline-flex; align-items:center; gap:.38rem;
-      padding:.58rem 1.25rem; border-radius:50px;
-      font-family:'DM Sans',sans-serif; font-weight:500; font-size:.87rem;
-      cursor:pointer; text-decoration:none; transition:all .2s; border:none;
-      white-space:nowrap; position:relative; overflow:hidden;
-    }
-
-    .btn svg { width:14px; height:14px; flex-shrink:0; }
-
-    .btn-primary {
-      background:var(--teal); color:#fff;
-      box-shadow:0 2px 12px rgba(26,158,116,.28);
-    }
-    .btn-primary::before {
-      content:''; position:absolute; inset:0;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
-      background-size:200% 100%; opacity:0; transition:opacity .3s;
-    }
-    .btn-primary:hover { background:var(--teal-dark); transform:translateY(-2px); box-shadow:0 6px 20px rgba(26,158,116,.35); }
-    .btn-primary:hover::before { opacity:1; animation:shimmer 1.2s ease infinite; }
-    .btn-primary:active { transform:translateY(0); }
-
-    .btn-outline { background:var(--white); color:var(--ink); border:1.5px solid var(--border); }
-    .btn-outline:hover { border-color:var(--teal); color:var(--teal); transform:translateY(-1px); }
-
-    .btn-danger-soft { background:var(--red-light); color:var(--red); border:1.5px solid #f5c0c0; }
-    .btn-danger-soft:hover { background:var(--red); color:#fff; transform:translateY(-1px); }
-
-    .btn-ghost-sm {
-      background:transparent; color:var(--muted); border:1px solid var(--border);
-      padding:.35rem .7rem; border-radius:8px; font-size:.76rem;
-    }
-    .btn-ghost-sm:hover { color:var(--teal); border-color:var(--teal); background:var(--teal-light); }
-    .btn-ghost-sm.danger:hover { color:var(--red); border-color:var(--red); background:var(--red-light); }
-
-    .is-hidden { display:none !important; }
-
-    /* ── PAGE ── */
-    .page { padding:2rem 2rem 3rem; }
-
-    /* ── PAGE HEADER ── */
-    .page-header {
-      display:flex; align-items:flex-start; justify-content:space-between;
-      margin-bottom:1.8rem; gap:1rem;
-      animation: fadeUp .5s .25s both;
-    }
-
-    .page-eyebrow {
-      font-size:.7rem; font-weight:700; letter-spacing:.1em;
-      text-transform:uppercase; color:var(--teal); margin-bottom:.25rem;
-    }
-
-    .page-title {
-      font-family:'Syne',sans-serif;
-      font-size:1.75rem; font-weight:800; line-height:1.15;
-      letter-spacing:-.02em; margin-bottom:.25rem;
-    }
-
-    .page-sub { font-size:.87rem; color:var(--muted); font-weight:300; }
-
-    /* ── STATS ROW ── */
-    .stats-row {
-      display:grid; grid-template-columns:repeat(4,1fr); gap:1rem;
-      margin-bottom:1.8rem;
-      animation: fadeUp .5s .32s both;
-    }
-
-    .stat-card {
-      background:var(--white); border:1px solid var(--border);
-      border-radius:var(--radius); padding:1.1rem 1.3rem;
-      position:relative; overflow:hidden;
-      transition:transform .22s, box-shadow .22s;
-    }
-
-    .stat-card:hover { transform:translateY(-3px); box-shadow:var(--shadow-lg); }
-
-    .stat-card::after {
-      content:''; position:absolute; bottom:0; left:0; right:0;
-      height:3px; transform-origin:left; animation:barGrow .6s .5s cubic-bezier(.22,1,.36,1) both;
-    }
-
-    .stat-card.c-teal::after  { background:var(--teal); }
-    .stat-card.c-blue::after  { background:var(--blue); }
-    .stat-card.c-amber::after { background:var(--amber); }
-    .stat-card.c-mint::after  { background:var(--mint); }
-
-    .stat-label {
-      font-size:.72rem; font-weight:600; letter-spacing:.06em;
-      text-transform:uppercase; color:var(--muted); margin-bottom:.4rem;
-      display:flex; align-items:center; gap:.35rem;
-    }
-
-    .stat-label svg { width:12px; height:12px; }
-
-    .stat-value {
-      font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; line-height:1;
-    }
-
-    .stat-card.c-teal .stat-value  { color:var(--teal); }
-    .stat-card.c-blue .stat-value  { color:var(--blue); }
-    .stat-card.c-amber .stat-value { color:var(--amber); }
-    .stat-card.c-mint .stat-value  { color:var(--teal-dark); }
-
-    .stat-sub { font-size:.73rem; color:var(--muted); margin-top:.15rem; }
-
-    /* ── MAIN GRID ── */
-    .main-grid {
-      display:grid;
-      grid-template-columns:360px 1fr;
-      gap:1.4rem;
-      align-items:start;
-    }
-
-    /* ── FORM CARD ── */
-    .form-card {
-      background:var(--white); border:1px solid var(--border);
-      border-radius:var(--radius); box-shadow:var(--shadow);
-      overflow:hidden; position:sticky; top:80px;
-      animation: slideInLeft .55s .35s cubic-bezier(.22,1,.36,1) both;
-      transition: box-shadow .25s;
-    }
-
-    .form-card:focus-within { box-shadow:0 0 0 3px var(--teal-light), var(--shadow-lg); }
-
-    .form-card-header {
-      padding:1.2rem 1.5rem;
-      border-bottom:1px solid var(--border);
-      display:flex; align-items:center; justify-content:space-between; gap:.8rem;
-    }
-
-    .form-card-header h2 {
-      font-family:'Syne',sans-serif; font-size:1rem; font-weight:700;
-    }
-
-    .form-card-header p { font-size:.78rem; color:var(--muted); margin-top:.15rem; }
-
-    .form-body { padding:1.4rem; display:flex; flex-direction:column; gap:.9rem; }
-
-    /* ── FORM FIELDS ── */
-    .field { display:flex; flex-direction:column; gap:.28rem; }
-
-    .field label {
-      font-size:.68rem; font-weight:700; letter-spacing:.08em;
-      text-transform:uppercase; color:var(--muted);
-      transition:color .2s;
-    }
-
-    .field:focus-within label { color:var(--teal); }
-
-    .field input, .field select, .field textarea {
-      padding:.62rem .9rem;
-      border:1.5px solid var(--border);
-      border-radius:var(--radius-sm);
-      font-family:'DM Sans',sans-serif; font-size:.88rem;
-      color:var(--ink); background:var(--paper);
-      transition:border-color .22s, background .22s, box-shadow .22s, transform .15s;
-      outline:none; width:100%;
-    }
-
-    .field input:focus, .field select:focus, .field textarea:focus {
-      border-color:var(--teal); background:var(--white);
-      box-shadow:0 0 0 3px var(--teal-light);
-      transform:translateY(-1px);
-    }
-
-    .field textarea { resize:vertical; min-height:72px; }
-
-    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
-
-    /* scope toggle pills */
-    .scope-toggle {
-      display:flex; gap:.4rem;
-    }
-
-    .scope-btn {
-      flex:1; padding:.55rem; border-radius:var(--radius-sm);
-      border:1.5px solid var(--border); background:var(--paper);
-      font-family:'DM Sans',sans-serif; font-size:.82rem; font-weight:500;
-      color:var(--muted); cursor:pointer;
-      transition:all .2s; display:flex; align-items:center; justify-content:center; gap:.35rem;
-    }
-
-    .scope-btn svg { width:13px; height:13px; }
-
-    .scope-btn.active {
-      background:var(--teal); color:#fff; border-color:var(--teal);
-      box-shadow:0 2px 10px rgba(26,158,116,.3);
-    }
-
-    .scope-btn:not(.active):hover { border-color:var(--teal-mid); color:var(--teal); background:var(--teal-light); }
-
-    /* status select color coding */
-    select#status option[value="Pending"]   { color:#e0900a; }
-    select#status option[value="Ongoing"]   { color:var(--blue); }
-    select#status option[value="Completed"] { color:var(--teal); }
-
-    /* submit btn */
-    .btn-save {
-      width:100%; padding:.75rem;
-      background:var(--teal); color:#fff;
-      border:none; border-radius:50px;
-      font-family:'DM Sans',sans-serif; font-weight:600; font-size:.92rem;
-      cursor:pointer; transition:all .22s;
-      box-shadow:0 2px 12px rgba(26,158,116,.28);
-      display:flex; align-items:center; justify-content:center; gap:.45rem;
-      position:relative; overflow:hidden;
-    }
-
-    .btn-save::before {
-      content:''; position:absolute; inset:0;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
-      background-size:200%; opacity:0; transition:opacity .3s;
-    }
-
-    .btn-save:hover { background:var(--teal-dark); transform:translateY(-2px); box-shadow:0 7px 22px rgba(26,158,116,.38); }
-    .btn-save:hover::before { opacity:1; animation:shimmer 1.1s ease infinite; }
-    .btn-save svg { width:15px; height:15px; }
-
-    .btn-ripple {
-      position:absolute; border-radius:50%;
-      background:rgba(255,255,255,.3);
-      animation:ripple .6s linear; pointer-events:none;
-    }
-
-    /* ── TASK LISTS COLUMN ── */
-    .lists-col { display:flex; flex-direction:column; gap:1.3rem; }
-
-    /* ── TASK PANEL ── */
-    .task-panel {
-      background:var(--white); border:1px solid var(--border);
-      border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden;
-    }
-
-    .task-panel:nth-child(1) { animation:slideInRight .55s .4s cubic-bezier(.22,1,.36,1) both; }
-    .task-panel:nth-child(2) { animation:slideInRight .55s .5s cubic-bezier(.22,1,.36,1) both; }
-
-    .task-panel-header {
-      padding:1.1rem 1.4rem;
-      border-bottom:1px solid var(--border);
-      display:flex; align-items:center; justify-content:space-between; gap:.8rem;
-    }
-
-    .task-panel-title {
-      display:flex; align-items:center; gap:.55rem;
-    }
-
-    .task-panel-icon {
-      width:30px; height:30px; border-radius:8px;
-      display:flex; align-items:center; justify-content:center; flex-shrink:0;
-    }
-
-    .task-panel-icon svg { width:14px; height:14px; }
-    .icon-personal { background:var(--teal-light); }
-    .icon-personal svg { color:var(--teal); }
-    .icon-group { background:var(--blue-light); }
-    .icon-group svg { color:var(--blue); }
-
-    .task-panel-name {
-      font-family:'Syne',sans-serif; font-size:1rem; font-weight:700;
-    }
-
-    .task-count {
-      background:var(--paper); border:1px solid var(--border);
-      font-size:.7rem; font-weight:700; color:var(--muted);
-      padding:.15rem .5rem; border-radius:50px; letter-spacing:.04em;
-    }
-
-    /* filter tabs */
-    .filter-tabs {
-      display:flex; gap:.3rem;
-      padding:.8rem 1.4rem;
-      border-bottom:1px solid var(--border);
-      background:var(--paper);
-      overflow-x:auto;
-    }
-
-    .filter-tab {
-      padding:.3rem .75rem; border-radius:50px;
-      font-size:.75rem; font-weight:600; cursor:pointer;
-      border:1.5px solid transparent; background:transparent;
-      color:var(--muted); font-family:'DM Sans',sans-serif;
-      transition:all .18s; white-space:nowrap;
-    }
-
-    .filter-tab.active { background:var(--teal); color:#fff; border-color:var(--teal); }
-    .filter-tab:not(.active):hover { border-color:var(--teal-mid); color:var(--teal); background:var(--teal-light); }
-
-    /* task list */
-    .task-list { padding:.6rem .8rem; display:flex; flex-direction:column; gap:.45rem; }
-
-    .task-list:empty::after {
-      content:'No tasks here yet.';
-      display:block; text-align:center;
-      font-size:.84rem; color:var(--muted);
-      padding:1.5rem; font-style:italic;
-    }
-
-    /* ── TASK CARD ── */
-    .task-card {
-      border:1px solid var(--border); border-radius:var(--radius-sm);
-      padding:.85rem 1rem;
-      background:var(--white);
-      transition:transform .22s, box-shadow .22s, border-color .22s;
-      cursor:pointer;
-      animation:taskSlideIn .35s cubic-bezier(.22,1,.36,1) both;
-      position:relative; overflow:hidden;
-    }
-
-    .task-card::before {
-      content:''; position:absolute; left:0; top:0; bottom:0;
-      width:3px; border-radius:2px 0 0 2px;
-      transition:width .2s;
-    }
-
-    .task-card.status-pending::before   { background:var(--amber); }
-    .task-card.status-ongoing::before   { background:var(--blue); }
-    .task-card.status-completed::before { background:var(--teal); }
-
-    .task-card:hover {
-      transform:translateY(-2px) translateX(2px);
-      box-shadow:var(--shadow-lg);
-      border-color:var(--teal-mid);
-    }
-
+    body { font-family: var(--font-body); background: var(--paper); color: var(--ink); min-height: 100vh; cursor: none; }
+
+    /* CURSOR */
+    .cursor { position:fixed;top:0;left:0;width:10px;height:10px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .22s,height .22s; }
+    .cursor-ring { position:fixed;top:0;left:0;width:30px;height:30px;border:1.5px solid var(--accent);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);opacity:.4; }
+    body::before { content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9000;opacity:.3; }
+
+    /* SIDEBAR */
+    .sidebar { position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--ink);display:flex;flex-direction:column;padding:1.5rem 1rem;z-index:100;overflow:hidden; }
+    .sidebar::before { content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(200,80,42,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(200,80,42,0.04) 1px,transparent 1px);background-size:32px 32px;pointer-events:none; }
+    .sidebar-orb { position:absolute;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(200,80,42,0.12) 0%,transparent 65%);bottom:-80px;right:-100px;pointer-events:none;animation:orbDrift 12s ease-in-out infinite alternate; }
+    @keyframes orbDrift { from{transform:translate(0,0) scale(1);}to{transform:translate(15px,-20px) scale(1.05);} }
+    .sidebar-inner { position:relative;z-index:1;display:flex;flex-direction:column;height:100%; }
+    .sidebar-logo { display:flex;align-items:center;gap:9px;text-decoration:none;margin-bottom:2rem;padding:0 0.25rem; }
+    .sidebar-logo-mark { width:32px;height:32px;border-radius:8px;background:var(--accent);display:grid;place-items:center;transition:transform var(--trans); }
+    .sidebar-logo:hover .sidebar-logo-mark { transform:rotate(-6deg) scale(1.06); }
+    .sidebar-logo-name { font-family:var(--font-display);font-size:1.3rem;color:white;letter-spacing:-0.01em; }
+    .sidebar-logo-name em { font-style:italic;color:var(--accent-light); }
+    .sidebar-section-label { font-size:0.6rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.22);padding:0 0.5rem;margin-bottom:0.4rem;margin-top:0.5rem; }
+    .nav-item { display:flex;align-items:center;gap:0.65rem;padding:0.6rem 0.7rem;border-radius:8px;text-decoration:none;font-size:0.84rem;font-weight:500;color:rgba(255,255,255,0.5);transition:background var(--trans),color var(--trans),transform var(--trans);margin-bottom:1px;position:relative; }
+    .nav-item svg { width:16px;height:16px;flex-shrink:0;opacity:0.7;transition:opacity var(--trans); }
+    .nav-item:hover { background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.88);transform:translateX(2px); }
+    .nav-item:hover svg { opacity:1; }
+    .nav-item.active { background:rgba(200,80,42,0.18);color:var(--accent-light); }
+    .nav-item.active svg { opacity:1; }
+    .nav-item.active::before { content:'';position:absolute;left:0;top:25%;bottom:25%;width:3px;background:var(--accent);border-radius:99px; }
+    .nav-badge { margin-left:auto;background:var(--accent);color:white;font-size:0.6rem;font-weight:700;padding:0.1rem 0.45rem;border-radius:99px; }
+    .sidebar-divider { height:1px;background:rgba(255,255,255,0.06);margin:0.75rem 0; }
+    .sidebar-user { margin-top:auto;padding:0.75rem;border-radius:var(--radius-sm);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:0.65rem; }
+    .user-av { width:32px;height:32px;border-radius:50%;background:var(--accent);display:grid;place-items:center;font-size:0.65rem;font-weight:700;color:white;flex-shrink:0; }
+    .user-name { font-size:0.82rem;font-weight:500;color:rgba(255,255,255,0.75); }
+    .user-role { font-size:0.68rem;color:rgba(255,255,255,0.28); }
+    .user-logout { margin-left:auto;color:rgba(255,255,255,0.25);cursor:pointer;transition:color var(--trans); }
+    .user-logout:hover { color:rgba(255,255,255,0.6); }
+
+    /* TOPBAR */
+    .topbar { position:fixed;top:0;left:var(--sidebar-w);right:0;height:56px;z-index:90;background:rgba(245,242,236,0.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 2rem; }
+    .topbar-left { display:flex;align-items:center;gap:0.5rem;font-size:0.78rem;color:var(--muted); }
+    .topbar-left span { color:var(--ink);font-weight:500; }
+    .topbar-sep { opacity:0.35; }
+    .topbar-right { display:flex;align-items:center;gap:0.6rem; }
+    .topbar-btn { height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;gap:0.4rem;padding:0 0.75rem;cursor:pointer;font-family:var(--font-body);font-size:0.78rem;font-weight:500;color:var(--muted);transition:all var(--trans); }
+    .topbar-btn svg { width:14px;height:14px;stroke:var(--muted); }
+    .topbar-btn:hover { background:var(--cream);border-color:var(--border-strong);color:var(--ink);transform:translateY(-1px); }
+    .topbar-btn:hover svg { stroke:var(--ink); }
+    .topbar-btn.danger:hover { background:var(--red-light);border-color:var(--red);color:var(--red); }
+    .topbar-btn.hidden { display:none; }
+    .topbar-date { font-size:0.78rem;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:0.3rem 0.75rem;border-radius:99px; }
+    .search-wrap { display:flex;align-items:center;gap:0.4rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0 0.75rem;height:34px;transition:border-color var(--trans),box-shadow var(--trans); }
+    .search-wrap:focus-within { border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow); }
+    .search-wrap svg { width:14px;height:14px;stroke:var(--muted);flex-shrink:0; }
+    .search-wrap input { border:none;background:transparent;outline:none;font-family:var(--font-body);font-size:0.8rem;color:var(--ink);width:160px; }
+    .search-wrap input::placeholder { color:var(--muted-2); }
+
+    /* MAIN */
+    .main-content { margin-left:var(--sidebar-w);margin-top:56px;padding:2rem;min-height:calc(100vh - 56px); }
+
+    /* HERO */
+    .page-hero { background:var(--ink);border-radius:var(--radius);padding:2.5rem;margin-bottom:1.75rem;position:relative;overflow:hidden; }
+    .page-hero::before { content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(200,80,42,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(200,80,42,0.05) 1px,transparent 1px);background-size:40px 40px;pointer-events:none; }
+    .hero-orb { position:absolute;border-radius:50%;pointer-events:none; }
+    .hero-orb-1 { width:400px;height:400px;background:radial-gradient(circle,rgba(200,80,42,0.16) 0%,transparent 65%);top:-150px;right:-80px;animation:orbDrift 16s ease-in-out infinite alternate; }
+    .hero-orb-2 { width:200px;height:200px;background:radial-gradient(circle,rgba(201,168,76,0.1) 0%,transparent 70%);bottom:-60px;left:30%;animation:orbDrift 10s ease-in-out infinite alternate-reverse; }
+    .hero-inner { position:relative;z-index:1;display:grid;grid-template-columns:1fr auto;gap:2rem;align-items:center; }
+    .hero-eyebrow { font-size:0.68rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent-light);display:flex;align-items:center;gap:0.5rem;margin-bottom:0.65rem;opacity:0;animation:fadeUp 0.5s 0.1s forwards; }
+    .hero-eyebrow::before { content:'';width:18px;height:1px;background:var(--accent-light); }
+    .page-hero h1 { font-family:var(--font-display);font-size:2.4rem;line-height:1.1;letter-spacing:-0.02em;color:white;margin-bottom:0.5rem;opacity:0;animation:fadeUp 0.55s 0.18s forwards; }
+    .page-hero h1 em { font-style:italic;color:var(--accent-light); }
+    .page-hero p { font-size:0.88rem;color:rgba(255,255,255,0.45);line-height:1.7;max-width:480px;font-weight:300;opacity:0;animation:fadeUp 0.55s 0.26s forwards; }
+    .hero-stats-row { display:flex;gap:2rem;margin-top:2rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,0.07);opacity:0;animation:fadeUp 0.5s 0.34s forwards; }
+    .hero-stat-num { font-family:var(--font-display);font-size:2rem;color:white;line-height:1; }
+    .hero-stat-num.c-accent { color:var(--accent-light); }
+    .hero-stat-num.c-gold { color:var(--gold); }
+    .hero-stat-num.c-blue { color:#7ec4f8; }
+    .hero-stat-label { font-size:0.7rem;color:rgba(255,255,255,0.32);margin-top:0.15rem; }
+
+    /* Due today alert card */
+    .due-alert { background:rgba(200,80,42,0.15);border:1px solid rgba(200,80,42,0.3);border-radius:var(--radius-sm);padding:1rem 1.25rem;display:flex;align-items:center;gap:0.75rem;opacity:0;animation:fadeUp 0.45s 0.4s forwards; }
+    .due-alert-dot { width:8px;height:8px;border-radius:50%;background:var(--accent-light);flex-shrink:0;animation:pulseDot 2s infinite; }
+    @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.6);} }
+    .due-alert-text { font-size:0.82rem;color:rgba(255,255,255,0.7); }
+    .due-alert-text strong { color:var(--accent-light); }
+
+    /* SECTION HEAD */
+    .section-head { display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.1rem; }
+    .section-eyebrow { font-size:0.65rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:0.4rem;margin-bottom:0.25rem; }
+    .section-eyebrow::before { content:'';width:14px;height:1px;background:var(--accent); }
+    .section-title { font-family:var(--font-display);font-size:1.55rem;line-height:1.15;letter-spacing:-0.01em; }
+
+    /* MAIN GRID */
+    .main-grid { display:grid;grid-template-columns:340px 1fr;gap:1.25rem;align-items:start; }
+
+    /* FORM PANEL */
+    .form-panel { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);position:sticky;top:72px;overflow:hidden;opacity:0;animation:fadeUp 0.5s 0.2s forwards; }
+    .form-panel:focus-within { border-color:rgba(200,80,42,0.3);box-shadow:0 0 0 3px var(--accent-glow); }
+    .form-panel-header { padding:1.25rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between; }
+    .form-panel-title { font-family:var(--font-display);font-size:1.2rem;letter-spacing:-0.01em; }
+    .form-panel-sub { font-size:0.78rem;color:var(--muted);margin-top:0.15rem; }
+    .editing-badge { font-size:0.64rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--amber);background:var(--amber-light);padding:0.2rem 0.55rem;border-radius:99px; }
+    .form-body { padding:1.25rem 1.4rem;display:flex;flex-direction:column;gap:0.85rem; }
+
+    /* SCOPE TOGGLE */
+    .scope-row { display:grid;grid-template-columns:1fr 1fr;gap:0.4rem; }
+    .scope-btn { padding:0.6rem;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--paper);font-family:var(--font-body);font-size:0.8rem;font-weight:500;color:var(--muted);cursor:pointer;transition:all var(--trans);display:flex;align-items:center;justify-content:center;gap:0.4rem; }
+    .scope-btn svg { width:14px;height:14px; }
+    .scope-btn.active { background:var(--ink);color:white;border-color:transparent;box-shadow:0 2px 10px rgba(13,13,13,0.2); }
+    .scope-btn:not(.active):hover { border-color:var(--border-strong);color:var(--ink); }
+
+    /* FIELDS */
+    .field { display:flex;flex-direction:column;gap:0.3rem; }
+    .field label { font-size:0.66rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted-2);transition:color var(--trans); }
+    .field:focus-within label { color:var(--accent); }
+    .field input, .field select, .field textarea { padding:0.65rem 0.9rem;border:1.5px solid rgba(13,13,13,0.12);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:0.865rem;color:var(--ink);background:var(--paper);transition:border-color var(--trans),box-shadow var(--trans),transform var(--trans);outline:none;width:100%; }
+    .field input:hover,.field select:hover,.field textarea:hover { border-color:rgba(13,13,13,0.22); }
+    .field input:focus,.field select:focus,.field textarea:focus { border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-glow);transform:translateY(-1px); }
+    .field input::placeholder,.field textarea::placeholder { color:#bab4aa; }
+    .field textarea { resize:vertical;min-height:72px; }
+    .field-row { display:grid;grid-template-columns:1fr 1fr;gap:0.6rem; }
+
+    /* SUBMIT */
+    .btn-submit { width:100%;padding:0.78rem 1rem;background:var(--ink);color:var(--surface);border:none;border-radius:99px;font-family:var(--font-body);font-weight:600;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;box-shadow:0 4px 18px rgba(13,13,13,0.18);transition:background var(--trans),transform var(--trans),box-shadow var(--trans);position:relative;overflow:hidden;letter-spacing:0.01em;margin-top:0.25rem; }
+    .btn-submit svg { width:15px;height:15px;flex-shrink:0;transition:transform 0.2s; }
+    .btn-submit:hover { background:var(--accent);transform:translateY(-2px);box-shadow:0 8px 26px rgba(200,80,42,0.32); }
+    .btn-submit:hover svg { transform:translateX(3px); }
+    .btn-submit::after { content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,0.18) 50%,transparent 65%);transform:translateX(-100%); }
+    .btn-submit:hover::after { transform:translateX(100%);transition:transform 0.5s ease; }
+    .btn-submit.success { background:var(--green) !important; }
+
+    /* TASK LISTS */
+    .lists-col { display:flex;flex-direction:column;gap:1.25rem; }
+
+    /* TASK PANEL */
+    .task-panel { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;opacity:0;animation:fadeUp 0.5s ease forwards; }
+    .task-panel-header { padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:0.75rem; }
+    .panel-title-row { display:flex;align-items:center;gap:0.55rem; }
+    .panel-icon { width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex-shrink:0; }
+    .panel-icon svg { width:15px;height:15px; }
+    .icon-personal { background:rgba(200,80,42,0.1);color:var(--accent); }
+    .icon-group { background:var(--blue-light);color:var(--blue); }
+    .panel-name { font-family:var(--font-display);font-size:1.1rem;letter-spacing:-0.01em; }
+    .task-count-badge { font-size:0.68rem;font-weight:700;color:var(--muted-2);background:var(--paper);border:1px solid var(--border);padding:0.15rem 0.5rem;border-radius:99px; }
+
+    /* FILTER TABS */
+    .filter-bar { display:flex;gap:0.3rem;padding:0.7rem 1.2rem;border-bottom:1px solid var(--border);background:var(--paper); }
+    .filter-tab { padding:0.28rem 0.7rem;border-radius:99px;font-size:0.74rem;font-weight:500;cursor:pointer;border:1px solid transparent;background:transparent;color:var(--muted);font-family:var(--font-body);transition:all var(--trans); }
+    .filter-tab.active { background:var(--ink);color:white;border-color:transparent; }
+    .filter-tab:not(.active):hover { border-color:var(--border-strong);color:var(--ink);background:var(--cream); }
+
+    /* ROLE FILTER BAR */
+    .role-bar { display:flex;align-items:center;gap:0.4rem;padding:0.5rem 1.2rem;border-bottom:1px solid var(--border);background:rgba(37,99,186,0.03); }
+    .role-bar-label { font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted-2);margin-right:0.25rem; }
+
+    /* TASK LIST */
+    .task-list { padding:0.75rem;display:flex;flex-direction:column;gap:0.5rem; }
+    .task-list:empty::after { content:'No tasks here yet.';display:block;text-align:center;font-size:0.82rem;color:var(--muted-2);padding:2rem;font-style:italic; }
+
+    /* TASK CARD */
+    .task-card { border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem 1.1rem;background:var(--surface);transition:transform var(--trans),box-shadow var(--trans),border-color var(--trans);cursor:pointer;position:relative;overflow:hidden;opacity:0;animation:taskIn 0.4s ease forwards; }
+    @keyframes taskIn { from{opacity:0;transform:translateX(-12px);}to{opacity:1;transform:translateX(0);} }
+    .task-card::before { content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px 0 0 2px;transition:width 0.2s; }
+    .task-card.s-pending::before   { background:var(--amber); }
+    .task-card.s-ongoing::before   { background:var(--blue); }
+    .task-card.s-completed::before { background:var(--green); }
+    .task-card:hover { transform:translateY(-2px) translateX(2px);box-shadow:var(--shadow-md);border-color:var(--border-strong); }
     .task-card:hover::before { width:5px; }
+    .task-card-top { display:flex;align-items:flex-start;justify-content:space-between;gap:0.6rem; }
+    .task-card-left { flex:1;min-width:0; }
+    .task-title { font-size:0.88rem;font-weight:600;line-height:1.3;margin-bottom:0.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .task-card.s-completed .task-title { text-decoration:line-through;opacity:0.55; }
+    .task-meta { display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem; }
+    .task-cat { font-size:0.66rem;font-weight:600;padding:0.12rem 0.45rem;border-radius:99px;background:var(--paper);border:1px solid var(--border);color:var(--muted);letter-spacing:0.03em; }
+    .task-due { font-size:0.7rem;color:var(--muted);display:flex;align-items:center;gap:0.25rem; }
+    .task-due svg { width:11px;height:11px; }
+    .task-due.overdue { color:var(--red);font-weight:600; }
+    .task-desc { font-size:0.78rem;color:var(--muted);line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
+    .assignee-row { display:flex;align-items:center;gap:0.35rem;margin-top:0.5rem; }
+    .assignee-av { width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:0.55rem;font-weight:700;color:white;flex-shrink:0; }
+    .assignee-name { font-size:0.72rem;color:var(--muted); }
 
-    .task-card-top {
-      display:flex; align-items:flex-start; justify-content:space-between; gap:.6rem;
-    }
+    /* STATUS BADGE */
+    .status-badge { display:inline-flex;align-items:center;gap:0.28rem;font-size:0.65rem;font-weight:700;padding:0.18rem 0.5rem;border-radius:99px;letter-spacing:0.04em;flex-shrink:0; }
+    .s-dot { width:5px;height:5px;border-radius:50%;flex-shrink:0; }
+    .badge-pending  { background:var(--amber-light);color:var(--amber); }
+    .badge-pending .s-dot  { background:var(--amber); }
+    .badge-ongoing  { background:var(--blue-light);color:var(--blue); }
+    .badge-ongoing .s-dot  { background:var(--blue);animation:pulseDot 2s infinite; }
+    .badge-completed { background:var(--green-light);color:var(--green); }
+    .badge-completed .s-dot { background:var(--green); }
 
-    .task-card-left { flex:1; min-width:0; }
+    /* NOTE TOGGLE */
+    .note-toggle { font-size:0.72rem;color:var(--accent);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;margin-top:0.35rem;display:flex;align-items:center;gap:0.3rem;transition:opacity var(--trans); }
+    .note-toggle:hover { opacity:0.7; }
+    .task-note { margin-top:0.5rem;padding:0.6rem 0.85rem;background:var(--paper);border-radius:var(--radius-sm);border-left:3px solid var(--accent);font-size:0.78rem;color:var(--muted);line-height:1.55;display:none; }
+    .task-note.open { display:block;animation:noteSlide 0.22s ease; }
+    @keyframes noteSlide { from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);} }
 
-    .task-card-title {
-      font-weight:600; font-size:.9rem; line-height:1.3;
-      margin-bottom:.2rem;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
+    /* CARD ACTIONS */
+    .task-actions { display:flex;gap:0.3rem;margin-top:0.65rem;opacity:0;transform:translateY(4px);transition:opacity var(--trans),transform var(--trans); }
+    .task-card:hover .task-actions { opacity:1;transform:translateY(0); }
+    .action-btn-sm { padding:0.28rem 0.65rem;border-radius:99px;font-size:0.72rem;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body);transition:all var(--trans); }
+    .action-btn-sm:hover { border-color:var(--accent);color:var(--accent);background:var(--accent-glow); }
+    .action-btn-sm.del:hover { border-color:var(--red);color:var(--red);background:var(--red-light); }
+    .action-btn-sm.discuss { color:var(--blue); }
+    .action-btn-sm.discuss:hover { border-color:var(--blue);background:var(--blue-light); }
 
-    .task-card.status-completed .task-card-title {
-      text-decoration:line-through; opacity:.6;
-    }
+    /* PRIORITY DOT */
+    .priority-dot { width:7px;height:7px;border-radius:50%;flex-shrink:0; }
+    .p-high { background:var(--red); }
+    .p-med  { background:var(--gold); }
+    .p-low  { background:var(--green); }
 
-    .task-card-meta {
-      display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
-      margin-bottom:.5rem;
-    }
+    /* FLASH */
+    #flash-container { margin-bottom:1.25rem; }
+    #flash-container:empty { display:none; }
+    .flash { padding:0.7rem 1rem;border-radius:var(--radius-sm);font-size:0.83rem;font-weight:500;border:1px solid;animation:fadeUp 0.3s ease;display:flex;align-items:center;gap:0.5rem; }
+    .flash-error { background:#fff2f0;border-color:#ffd3cc;color:#991414; }
+    .flash-success { background:#f0fdf6;border-color:#c6f0da;color:#166534; }
 
-    .task-cat {
-      font-size:.68rem; font-weight:600; padding:.12rem .45rem;
-      border-radius:50px; background:var(--paper); border:1px solid var(--border);
-      color:var(--muted); letter-spacing:.03em;
-    }
+    /* DISCUSSION DRAWER */
+    .drawer-overlay { position:fixed;inset:0;background:rgba(13,13,13,0.4);backdrop-filter:blur(4px);z-index:800;display:none;animation:fadeIn 0.25s ease; }
+    .drawer-overlay.open { display:block; }
+    .drawer { position:fixed;top:0;right:-520px;width:min(480px,100vw);height:100vh;background:var(--surface);z-index:900;box-shadow:-8px 0 40px rgba(0,0,0,0.12);display:flex;flex-direction:column;transition:right 0.4s cubic-bezier(0.22,1,0.36,1); }
+    .drawer.open { right:0; }
+    .drawer-header { padding:1.4rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between; }
+    .drawer-eyebrow { font-size:0.64rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:0.25rem; }
+    .drawer-title { font-family:var(--font-display);font-size:1.2rem;letter-spacing:-0.01em; }
+    .drawer-close { width:32px;height:32px;border:none;background:var(--paper);border-radius:8px;cursor:pointer;display:grid;place-items:center;transition:background var(--trans);flex-shrink:0;margin-left:0.75rem; }
+    .drawer-close:hover { background:var(--cream); }
+    .drawer-body { flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:0.85rem;background:var(--paper); }
+    .drawer-footer { padding:1.2rem 1.5rem;border-top:1px solid var(--border);background:var(--surface); }
 
-    .task-deadline {
-      font-size:.72rem; color:var(--muted);
-      display:flex; align-items:center; gap:.25rem;
-    }
+    .comment { display:flex;gap:0.75rem;animation:fadeUp 0.35s ease; }
+    .comment-av { width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:0.62rem;font-weight:700;color:white;flex-shrink:0;margin-top:2px; }
+    .comment-bubble { background:var(--surface);border:1px solid var(--border);border-radius:0 12px 12px 12px;padding:0.85rem;flex:1;box-shadow:var(--shadow-sm); }
+    .comment-author { font-size:0.72rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem; }
+    .comment-text { font-size:0.86rem;color:var(--ink);line-height:1.55; }
+    .comment-time { font-size:0.64rem;color:var(--muted-2);margin-top:0.35rem; }
 
-    .task-deadline svg { width:11px; height:11px; }
-    .task-deadline.overdue { color:var(--red); font-weight:600; }
+    .typing-ind { display:flex;align-items:center;gap:0.45rem;padding:0.55rem 0.9rem;background:var(--surface);border:1px solid var(--border);border-radius:99px;width:fit-content;font-size:0.74rem;color:var(--muted);animation:fadeUp 0.3s ease; }
+    .typing-dots { display:flex;gap:3px; }
+    .typing-dot { width:4px;height:4px;background:var(--accent);border-radius:50%;animation:typeBounce 1.4s infinite ease-in-out; }
+    .typing-dot:nth-child(2){animation-delay:.2s;} .typing-dot:nth-child(3){animation-delay:.4s;}
+    @keyframes typeBounce { 0%,80%,100%{transform:translateY(0);}40%{transform:translateY(-5px);} }
 
-    .task-desc {
-      font-size:.78rem; color:var(--muted); line-height:1.5;
-      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
-      overflow:hidden;
-    }
+    .comment-input-field { padding:0.7rem 0.9rem;border:1.5px solid rgba(13,13,13,0.12);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:0.875rem;color:var(--ink);background:var(--paper);outline:none;width:100%;resize:none;min-height:80px;transition:border-color var(--trans),box-shadow var(--trans); }
+    .comment-input-field:focus { border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-glow); }
 
-    /* status badge */
-    .status-badge {
-      display:inline-flex; align-items:center; gap:.28rem;
-      font-size:.67rem; font-weight:700; padding:.18rem .52rem;
-      border-radius:50px; letter-spacing:.04em; flex-shrink:0;
-    }
+    @keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
 
-    .status-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-
-    .badge-pending  { background:var(--amber-light); color:#a06000; }
-    .badge-pending .status-dot  { background:var(--amber); }
-
-    .badge-ongoing  { background:var(--blue-light); color:var(--blue); }
-    .badge-ongoing .status-dot  { background:var(--blue); animation:pulse 2s infinite; }
-
-    .badge-completed { background:var(--teal-light); color:var(--teal-dark); }
-    .badge-completed .status-dot { background:var(--teal); }
-
-    /* task card actions */
-    .task-card-actions {
-      display:flex; gap:.3rem; margin-top:.6rem;
-      opacity:0; transform:translateY(4px);
-      transition:opacity .18s, transform .18s;
-    }
-
-    .task-card:hover .task-card-actions { opacity:1; transform:none; }
-
-    /* assignee chip */
-    .assignee-chip {
-      display:inline-flex; align-items:center; gap:.3rem;
-      font-size:.72rem; color:var(--muted); margin-top:.4rem;
-    }
-
-    .assignee-avatar {
-      width:18px; height:18px; border-radius:50%;
-      background:var(--teal); color:#fff;
-      font-size:.55rem; font-weight:700;
-      display:flex; align-items:center; justify-content:center;
-    }
-
-    /* progress note toggle */
-    .note-toggle {
-      font-size:.72rem; color:var(--teal); cursor:pointer;
-      background:none; border:none; font-family:inherit;
-      padding:0; margin-top:.3rem;
-      transition:opacity .2s;
-    }
-
-    .note-toggle:hover { opacity:.75; }
-
-    .task-note {
-      margin-top:.5rem; padding:.6rem .8rem;
-      background:var(--paper); border-radius:var(--radius-sm);
-      border-left:3px solid var(--teal-mid);
-      font-size:.78rem; color:var(--muted); line-height:1.55;
-      display:none; animation:slideDown .22s ease;
-    }
-
-    .task-note.open { display:block; }
-
-    /* ── DISCUSSION DRAWER ── */
-    .drawer-backdrop {
-      position: fixed; inset: 0; background: rgba(13, 31, 26, 0.4);
-      backdrop-filter: blur(4px); z-index: 1000; display: none;
-      animation: fadeIn .3s ease;
-    }
-    .drawer-backdrop.is-active { display: block; }
-
-    .drawer {
-      position: fixed; top: 0; right: -500px; width: min(500px, 100vw);
-      height: 100vh; background: var(--white); z-index: 1001;
-      box-shadow: -10px 0 40px rgba(0,0,0,0.1);
-      display: flex; flex-direction: column;
-      transition: right 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-    .drawer.is-open { right: 0; }
-
-    .drawer-header {
-      padding: 1.5rem; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .drawer-body {
-      flex: 1; overflow-y: auto; padding: 1.5rem;
-      display: flex; flex-direction: column; gap: 1.2rem;
-      background: var(--paper);
-    }
-    .drawer-footer {
-      padding: 1.2rem; border-top: 1px solid var(--border);
-      background: var(--white);
-    }
-
-    .comment-bubble {
-      display: flex; gap: 0.8rem; animation: fadeUp .4s ease both;
-    }
-    .comment-content {
-      background: var(--white); padding: 0.9rem;
-      border-radius: 0 1.2rem 1.2rem 1.2rem;
-      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-      flex: 1;
-    }
-    .comment-author {
-      font-size: 0.75rem; font-weight: 800; color: var(--teal);
-      margin-bottom: 0.2rem; display: block; text-transform: uppercase;
-    }
-    .comment-text { font-size: 0.88rem; color: var(--ink); line-height: 1.5; }
-    .comment-time {
-      font-size: 0.65rem; color: var(--muted); margin-top: 0.4rem; display: block;
-    }
-
-    /* ── TYING INDICATOR ── */
-    .typing-indicator {
-      display: flex; align-items: center; gap: .45rem;
-      padding: .6rem 1rem; background: var(--white);
-      border-radius: 1rem; border: 1px solid var(--border);
-      width: fit-content; margin-top: .5rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-      animation: fadeUp .3s ease both;
-    }
-    .typing-dots { display: flex; gap: 3px; margin-right: 2px; }
-    .typing-dot { width: 4px; height: 4px; background: var(--teal); border-radius: 50%; animation: typing-bounce 1.4s infinite ease-in-out; }
-    .typing-dot:nth-child(2) { animation-delay: .2s; }
-    .typing-dot:nth-child(3) { animation-delay: .4s; }
-    @keyframes typing-bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-5px); } }
-
-    .pulse-urgent {
-      animation: textPulse 2s infinite ease-in-out;
-    }
-    @keyframes textPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-    /* ── SEARCH BAR ── */
-    .search-bar {
-      display: flex; align-items: center; gap: .5rem;
-      background: var(--paper); border: 1.5px solid var(--border);
-      border-radius: 50px; padding: .4rem .9rem;
-      font-family: 'DM Sans', sans-serif; font-size: .82rem;
-    }
-    .search-bar svg { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; }
-    .search-bar input { border: none; background: transparent; outline: none; font-family: inherit; font-size: inherit; color: var(--ink); width: 180px; }
-    .search-bar input::placeholder { color: var(--muted); opacity: 0.7; }
-
-    @keyframes slideDown {
-      from { opacity:0; transform:translateY(-6px); }
-      to   { opacity:1; transform:none; }
-    }
-
-    /* ── FLASH ── */
-    .flash-stack { display:flex; flex-direction:column; gap:.5rem; margin-bottom:1rem; }
-    .flash-stack:empty { display:none; }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width:980px) {
-      body.nav-open { overflow:hidden; }
-      .sidebar {
-        transform:translateX(-100%);
-        transition:transform .22s ease;
-      }
-      body.nav-open .sidebar { transform:translateX(0); }
-      body.nav-open .mobile-nav-backdrop {
-        opacity:1;
-        pointer-events:auto;
-      }
-      .layout { margin-left:0; }
-      .main-grid { grid-template-columns:1fr; }
-      .stats-row { grid-template-columns:repeat(2,1fr); }
-      .form-card { position:static; }
-      .page { padding:1.2rem; }
-      .mobile-nav-toggle { display:inline-flex; }
-      .topbar { padding:.8rem 1rem; }
-      .topbar-actions {
-        width:100%;
-        flex-wrap:wrap;
-        justify-content:flex-end;
-      }
-      .search-bar input { width:120px; }
+    @media (max-width:900px) {
+      .sidebar{transform:translateX(-100%);} .main-content{margin-left:0;} .topbar{left:0;}
+      .main-grid{grid-template-columns:1fr;} .form-panel{position:static;}
     }
   </style>
 </head>
 <body>
 
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
 <!-- SIDEBAR -->
 <aside class="sidebar">
-  <a href="index.html" class="sidebar-logo">
-    <div class="sidebar-logo-icon">
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-        <polyline points="4,10 8,14 16,6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <span class="sidebar-logo-text">Task<span>ly</span></span>
-  </a>
-
-  <nav class="sidebar-nav">
-    <div class="sidebar-section-label">Overview</div>
-    <a href="dashboard.html" class="sidebar-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Dashboard
+  <div class="sidebar-orb"></div>
+  <div class="sidebar-inner">
+    <a href="index.html" class="sidebar-logo">
+      <div class="sidebar-logo-mark"><svg width="15" height="15" viewBox="0 0 20 20" fill="none"><polyline points="4,10 8,14 16,6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <span class="sidebar-logo-name">Task<em>ly</em></span>
     </a>
-
-    <div class="sidebar-section-label">Work</div>
-    <a href="tasks.html" class="sidebar-link active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-      Tasks
-    </a>
-    <a href="groups.html" class="sidebar-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-      Groups
-      <span class="sidebar-badge">0</span>
-    </a>
-    <a href="feed.html" class="sidebar-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-      Feed
-    </a>
-
+    <div class="sidebar-section-label">Main</div>
+    <a href="dashboard.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+    <a href="tasks.html" class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-2 10h10l-9 10 2-10H3Z"/></svg>Tasks<span class="nav-badge">8</span></a>
+    <a href="groups.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Groups</a>
+    <a href="activity.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Activity</a>
+    <div class="sidebar-divider"></div>
     <div class="sidebar-section-label">Account</div>
-    <a href="profile.html" class="sidebar-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      Profile
-    </a>
-    <a href="admin.html" class="sidebar-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
-      Admin
-    </a>
-  </nav>
-
-  <div class="sidebar-footer">
+    <a href="profile.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Profile</a>
+    <a href="settings.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+    <a href="admin.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>Admin</a>
+    <div class="sidebar-divider"></div>
     <div class="sidebar-user">
-      <div class="sidebar-user-avatar">MU</div>
-      <div>
-        <div class="sidebar-user-name">Muhammad AbdulKadir Saeed</div>
-        <div class="sidebar-user-role">Student Workspace</div>
-      </div>
+      <div class="user-av">JD</div>
+      <div><div class="user-name">Jamie D.</div><div class="user-role">Leader</div></div>
+      <div class="user-logout"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
     </div>
   </div>
 </aside>
 
-<div class="mobile-nav-backdrop" id="mobile-nav-backdrop"></div>
-
-<!-- LAYOUT -->
-<div class="layout">
-
-  <!-- TOPBAR -->
-  <header class="topbar">
-    <div class="topbar-breadcrumb">
-      <span>Taskly</span><span>/</span><strong>Tasks</strong>
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-left"><span>Taskly</span><span class="topbar-sep">/</span><span>Tasks</span></div>
+  <div class="topbar-right">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="task-search" placeholder="Search tasks…"/>
     </div>
-    <div class="topbar-actions">
-      <button class="mobile-nav-toggle" id="mobile-nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="4" y1="7" x2="20" y2="7"></line>
-          <line x1="4" y1="12" x2="20" y2="12"></line>
-          <line x1="4" y1="17" x2="20" y2="17"></line>
-        </svg>
-      </button>
-      <div class="search-bar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="task-search" placeholder="Search tasks..."/>
-      </div>
-      <select id="task-sort" class="search-bar" style="width: auto; cursor: pointer;">
-        <option value="deadline">Sort: Deadline</option>
-        <option value="priority">Sort: Priority</option>
-        <option value="status">Sort: Status</option>
-      </select>
-      <button id="cancel-edit-button" class="btn btn-danger-soft is-hidden" type="button" onclick="cancelEdit()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        Cancel editing
-      </button>
+    <div class="topbar-btn" id="sort-btn" style="gap:0.4rem;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Sort: Deadline
     </div>
-  </header>
+    <div class="topbar-btn danger hidden" id="cancel-edit-btn" onclick="cancelEdit()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Cancel edit
+    </div>
+    <div class="topbar-date" id="topbar-date">—</div>
+  </div>
+</header>
 
-  <main class="page">
+<!-- MAIN -->
+<main class="main-content">
 
-    <!-- PAGE HEADER -->
-    <div class="page-header">
+  <!-- HERO -->
+  <section class="page-hero">
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+    <div class="hero-inner">
       <div>
-        <div class="page-eyebrow">Task management</div>
-        <h1 class="page-title">Assign, track &amp; complete</h1>
-        <p class="page-sub">One workspace for personal tasks, group tasks, reminders, deadlines, and progress notes.</p>
+        <div class="hero-eyebrow">Task Management</div>
+        <h1>Assign, track &amp; <em>complete</em></h1>
+        <p>One workspace for personal tasks, group tasks, deadlines, and progress notes.</p>
+        <div class="hero-stats-row">
+          <div><div class="hero-stat-num c-accent" id="stat-total">8</div><div class="hero-stat-label">Total tasks</div></div>
+          <div><div class="hero-stat-num" id="stat-pending">3</div><div class="hero-stat-label">Pending</div></div>
+          <div><div class="hero-stat-num c-blue" id="stat-ongoing">3</div><div class="hero-stat-label">Ongoing</div></div>
+          <div><div class="hero-stat-num c-gold" id="stat-done">2</div><div class="hero-stat-label">Done</div></div>
+        </div>
+      </div>
+      <div class="due-alert" id="due-alert" style="display:none">
+        <div class="due-alert-dot"></div>
+        <div class="due-alert-text"><strong id="due-alert-count">1 task</strong> due today — act fast</div>
       </div>
     </div>
+  </section>
 
-    <!-- STATS -->
-    <div class="stats-row">
-      <div class="stat-card c-teal">
-        <div class="stat-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-          Total tasks
+  <div id="flash-container"></div>
+
+  <!-- SECTION HEADER -->
+  <div class="section-head" style="opacity:0;animation:fadeUp 0.45s 0.15s forwards">
+    <div><div class="section-eyebrow">Work</div><div class="section-title">All your tasks</div></div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- FORM -->
+    <div class="form-panel" id="form-panel">
+      <div class="form-panel-header">
+        <div>
+          <div class="form-panel-title" id="form-title">Create a task</div>
+          <div class="form-panel-sub">Leaders create group tasks. Anyone can add personal tasks.</div>
         </div>
-        <div class="stat-value">8</div>
-        <div class="stat-sub">Across all groups</div>
+        <span class="editing-badge hidden" id="editing-badge">Editing</span>
       </div>
-      <div class="stat-card c-amber">
-        <div class="stat-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Pending
-        </div>
-        <div class="stat-value">3</div>
-        <div class="stat-sub">Awaiting action</div>
-      </div>
-      <div class="stat-card c-blue">
-        <div class="stat-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          Ongoing
-        </div>
-        <div class="stat-value">3</div>
-        <div class="stat-sub">In progress</div>
-      </div>
-      <div class="stat-card c-mint">
-        <div class="stat-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          Completed
-        </div>
-        <div class="stat-value">2</div>
-        <div class="stat-sub">Done</div>
-      </div>
-    </div>
+      <form id="task-form" class="form-body">
 
-    <div id="flash-container" class="flash-stack"></div>
-
-    <!-- DUE TODAY SECTION -->
-    <section id="due-today-section" class="is-hidden" style="margin-bottom: 2rem; animation: fadeUp .5s .35s both;">
-      <div class="page-eyebrow pulse-urgent" style="color: var(--red);">Urgent: Due Today</div>
-      <div id="due-today-list" class="cards-grid" style="margin-top: 1rem;"></div>
-    </section>
-
-    <!-- MAIN GRID -->
-    <div class="main-grid">
-
-      <!-- ── FORM CARD ── -->
-      <div class="form-card">
-        <div class="form-card-header">
-          <div>
-            <h2 id="task-form-title">Create a task</h2>
-            <p>Leaders create group tasks. Anyone can add personal tasks.</p>
-          </div>
-          <div id="edit-indicator" style="display:none;">
-            <span style="font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);background:var(--amber-light);padding:.2rem .6rem;border-radius:50px;">Editing</span>
-          </div>
-        </div>
-
-        <form id="task-form" onsubmit="handleSave(event)">
-          <div class="form-body">
-
-            <!-- scope toggle -->
-            <div class="field">
-              <label>Task scope</label>
-              <div class="scope-toggle">
-                <button type="button" class="scope-btn active" id="scope-personal" onclick="setScope('personal')">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  Personal
-                </button>
-                <button type="button" class="scope-btn" id="scope-group" onclick="setScope('group')">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                  Group
-                </button>
-              </div>
-              <input type="hidden" id="taskScope" name="taskScope" value="personal"/>
-            </div>
-
-            <div class="field-row">
-              <div class="field">
-                <label for="taskType">Task type</label>
-                <select id="taskType" name="taskType">
-                  <option value="deadline">Deadline task</option>
-                  <option value="reminder">Reminder</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="status">Status</label>
-                <select id="status" name="status">
-                  <option value="Pending">Pending</option>
-                  <option value="Ongoing">Ongoing</option>
-                  <option value="Completed">Completed</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="field">
-              <label for="title">Title</label>
-              <input id="title" name="title" required placeholder="What needs to be done?"/>
-            </div>
-
-            <div class="field-row">
-              <div class="field">
-                <label for="category">Category</label>
-                <input id="category" name="category" placeholder="UI, Testing…" required/>
-              </div>
-              <div class="field">
-                <label for="priority">Priority</label>
-                <select id="priority" name="priority">
-                  <option value="High">High</option>
-                  <option value="Medium" selected>Medium</option>
-                  <option value="Low">Low</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="field">
-              <label for="deadline">Deadline</label>
-              <input id="deadline" name="deadline" type="date"/>
-            </div>
-
-            <div class="field">
-              <label for="description">Description</label>
-              <textarea id="description" name="description" required placeholder="Describe the task…"></textarea>
-            </div>
-
-            <div class="field" id="group-field">
-              <label for="groupId">Group</label>
-              <select id="groupId" name="groupId">
-                <option value="">— select group —</option>
-                <option>Frontend Dev Team</option>
-                <option>UX Research Group</option>
-              </select>
-            </div>
-
-            <div class="field" id="assign-field">
-              <label for="assignedTo">Assign to</label>
-              <select id="assignedTo" name="assignedTo">
-                <option value="">— select member —</option>
-                <option>Ahmed L.</option>
-                <option>Sara M.</option>
-                <option>Khalid R.</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="progressNote">Progress note</label>
-              <textarea id="progressNote" name="progressNote" placeholder="Optional starting note or update…"></textarea>
-            </div>
-
-            <button class="btn-save" type="submit" id="save-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              Save task
-            </button>
-
-          </div>
-        </form>
-      </div>
-
-      <!-- ── TASK LISTS ── -->
-      <div class="lists-col">
-
-        <!-- Personal Tasks -->
-        <div class="task-panel">
-          <div class="task-panel-header">
-            <div class="task-panel-title">
-              <div class="task-panel-icon icon-personal">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              </div>
-              <span class="task-panel-name">Personal tasks</span>
-              <span class="task-count">3</span>
-            </div>
-            <div style="display:flex;gap:.4rem;">
-              <button class="filter-tab active" onclick="filterTasks(this,'personal','all')">All</button>
-              <button class="filter-tab" onclick="filterTasks(this,'personal','pending')">Pending</button>
-              <button class="filter-tab" onclick="filterTasks(this,'personal','ongoing')">Ongoing</button>
-              <button class="filter-tab" onclick="filterTasks(this,'personal','completed')">Done</button>
-            </div>
-          </div>
-
-          <div class="task-list" id="personal-tasks">
-
-            <div class="task-card status-pending" data-status="pending">
-              <div class="task-card-top">
-                <div class="task-card-left">
-                  <div class="task-card-title">Research component libraries</div>
-                  <div class="task-card-meta">
-                    <span class="task-cat">Research</span>
-                    <span class="task-deadline">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      Apr 25, 2025
-                    </span>
-                  </div>
-                  <div class="task-desc">Look into Tailwind, Shadcn, and Radix for the frontend layer. Compare DX and bundle size.</div>
-                </div>
-                <span class="status-badge badge-pending"><span class="status-dot"></span>Pending</span>
-              </div>
-              <div class="task-card-actions">
-                <button class="btn-ghost-sm" onclick="editTask(this)">Edit</button>
-                <button class="btn-ghost-sm danger" onclick="deleteTask(this)">Delete</button>
-              </div>
-            </div>
-
-            <div class="task-card status-ongoing" data-status="ongoing">
-              <div class="task-card-top">
-                <div class="task-card-left">
-                  <div class="task-card-title">Set up local dev environment</div>
-                  <div class="task-card-meta">
-                    <span class="task-cat">Setup</span>
-                    <span class="task-deadline">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      Apr 22, 2025
-                    </span>
-                  </div>
-                  <div class="task-desc">Install Node, configure Vite, and wire up the project skeleton.</div>
-                  <button class="note-toggle" onclick="toggleNote(this)">▸ Show progress note</button>
-                  <div class="task-note">Node 20 LTS installed. Vite config done. Still need to configure path aliases.</div>
-                </div>
-                <span class="status-badge badge-ongoing"><span class="status-dot"></span>Ongoing</span>
-              </div>
-              <div class="task-card-actions">
-                <button class="btn-ghost-sm" onclick="editTask(this)">Edit</button>
-                <button class="btn-ghost-sm danger" onclick="deleteTask(this)">Delete</button>
-              </div>
-            </div>
-
-            <div class="task-card status-completed" data-status="completed">
-              <div class="task-card-top">
-                <div class="task-card-left">
-                  <div class="task-card-title">Create project repo and branch strategy</div>
-                  <div class="task-card-meta">
-                    <span class="task-cat">Setup</span>
-                  </div>
-                  <div class="task-desc">Init Git repo, set up main/dev/feature branch rules, add README.</div>
-                </div>
-                <span class="status-badge badge-completed"><span class="status-dot"></span>Done</span>
-              </div>
-              <div class="task-card-actions">
-                <button class="btn-ghost-sm" onclick="editTask(this)">Edit</button>
-                <button class="btn-ghost-sm danger" onclick="deleteTask(this)">Delete</button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- Group Tasks -->
-        <div class="task-panel">
-          <div class="task-panel-header">
-            <div class="task-panel-title">
-              <div class="task-panel-icon icon-group">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-              </div>
-              <span class="task-panel-name">Group tasks</span>
-              <span class="task-count">5</span>
-            </div>
-            <div style="display:flex;gap:.4rem;">
-              <button class="filter-tab active" onclick="filterTasks(this,'group','all')">All</button>
-              <button class="filter-tab" onclick="filterTasks(this,'group','pending')">Pending</button>
-              <button class="filter-tab" onclick="filterTasks(this,'group','ongoing')">Ongoing</button>
-              <button class="filter-tab" onclick="filterTasks(this,'group','completed')">Done</button>
-            </div>
-          </div>
-          <div class="filter-tabs" id="group-role-filters" style="background: rgba(26,158,116,0.03); border-bottom: 1px solid var(--border); padding: 0.5rem 1.4rem;">
-            <span style="font-size: .65rem; font-weight: 700; color: var(--muted); margin-right: .5rem; text-transform: uppercase; letter-spacing: .05em;">Filter by Role:</span>
-            <button class="filter-tab active" data-role="all">All Roles</button>
-            <button class="filter-tab" data-role="leader">Leader</button>
-            <button class="filter-tab" data-role="editor">Editor</button>
-            <button class="filter-tab" data-role="member">Member</button>
-          </div>
-
-          <div class="task-list" id="group-tasks">
-
-            <div class="task-card status-pending" data-status="pending">
-              <div class="task-card-top">
-                <div class="task-card-left">
-                  <div class="task-card-title">Design login and register screens</div>
-                  <div class="task-card-meta">
-                    <span class="task-cat">UI</span>
-                    <span class="task-deadline overdue">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      Apr 18 — overdue
-                    </span>
-                  </div>
-                  <div class="task-desc">Figma wireframes for auth flow. Both mobile and desktop layouts required.</div>
-                  <div class="assignee-chip">
-                    <div class="assignee-avatar">SM</div>
-                    Sara M.
-                  </div>
-                </div>
-                <span class="status-badge badge-pending"><span class="status-dot"></span>Pending</span>
-              </div>
-              <div class="task-card-actions">
-                <button class="btn-ghost-sm" onclick="editTask(this)">Edit</button>
-                <button class="btn-ghost-sm danger" onclick="deleteTask(this)">Delete</button>
-              </div>
-            </div>
-
-            <div class="task-card status-ongoing" data-status="ongoing">
-              <div class="task-card-top">
-                <div class="task-card-left">
-                  <div class="task-card-title">Build task CRUD API layer</div>
-                  <div class="task-card-meta">
-                    <span class="task-cat">Backend</span>
-                    <span class="task-deadline">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      Apr 28, 2025
-                    </span>
-                  </div>
-                  <div class="task-desc">LocalStorage adapter for create, read, update, and delete task operations.</div>
-                  <div class="assignee-chip">
-                    <div class="assignee-avatar">AL</div>
-                    Ahmed L.
-                  </div>
-                  <button class="note-toggle" onclick="toggleNote(this)">▸ Show progress note</button>
-                  <div class="task-note">Read/list done. Write and delete methods in review.</div>
-                </div>
-                <span class="status-badge badge-ongoing"><span class="status-dot"></span>Ongoing</span>
-              </div>
-              <div class="task-card-actions">
-                <button class="btn-ghost-sm" onclick="editTask(this)">Edit</button>
-                <button class="btn-ghost-sm danger" onclick="deleteTask(this)">Delete</button>
-              </div>
-            </div>
-
-            <div class="task-card status-ongoing" data-status="ongoing">
-              <div class="task-card-top">
-                <div class="task-card-left">
-                  <div class="task-card-title">Write unit tests for task module</div>
-                  <div class="task-card-meta">
-                    <span class="task-cat">Testing</span>
-                    <span class="task-deadline">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      May 2, 2025
-                    </span>
-                  </div>
-                  <div class="task-desc">Vitest + Testing Library. Cover create, edit, delete, and status update flows.</div>
-                  <div class="assignee-chip">
-                    <div class="assignee-avatar">KR</div>
-                    Khalid R.
-                  </div>
-                </div>
-                <span class="status-badge badge-ongoing"><span class="status-dot"></span>Ongoing</span>
-              </div>
-              <div class="task-card-actions">
-                <button class="btn-ghost-sm" onclick="editTask(this)">Edit</button>
-                <button class="btn-ghost-sm danger" onclick="deleteTask(this)">Delete</button>
-              </div>
-            </div>
-
-            <div class="task-card status-pending" data-status="pending">
-              <div class="task-card-top">
-                <div class="task-card-left">
-                  <div class="task-card-title">Prepare final presentation slides</div>
-                  <div class="task-card-meta">
-                    <span class="task-cat">Documentation</span>
-                    <span class="task-deadline">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      May 10, 2025
-                    </span>
-                  </div>
-                  <div class="task-desc">10-slide deck covering architecture, features, and demo walkthrough.</div>
-                  <div class="assignee-chip">
-                    <div class="assignee-avatar">AL</div>
-                    Ahmed L.
-                  </div>
-                </div>
-                <span class="status-badge badge-pending"><span class="status-dot"></span>Pending</span>
-              </div>
-              <div class="task-card-actions">
-                <button class="btn-ghost-sm" onclick="editTask(this)">Edit</button>
-                <button class="btn-ghost-sm danger" onclick="deleteTask(this)">Delete</button>
-              </div>
-            </div>
-
-            <div class="task-card status-completed" data-status="completed">
-              <div class="task-card-top">
-                <div class="task-card-left">
-                  <div class="task-card-title">Finalize group name and project scope</div>
-                  <div class="task-card-meta">
-                    <span class="task-cat">Planning</span>
-                  </div>
-                  <div class="task-desc">Agreed on project name, scope, tech stack, and responsibility split.</div>
-                  <div class="assignee-chip">
-                    <div class="assignee-avatar">AL</div>
-                    Ahmed L.
-                  </div>
-                </div>
-                <span class="status-badge badge-completed"><span class="status-dot"></span>Done</span>
-              </div>
-              <div class="task-card-actions">
-                <button class="btn-ghost-sm" onclick="editTask(this)">Edit</button>
-                <button class="btn-ghost-sm danger" onclick="deleteTask(this)">Delete</button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-  </main>
-
-  <!-- DISCUSSION DRAWER -->
-  <div id="drawer-backdrop" class="drawer-backdrop"></div>
-  <aside id="discussion-drawer" class="drawer">
-    <div class="drawer-header">
-      <div>
-        <div class="page-eyebrow">Discussion Thread</div>
-        <h2 id="drawer-task-title" style="font-size: 1.1rem; margin: 0;">Task Title</h2>
-      </div>
-      <button class="action-btn" id="close-drawer" title="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div id="drawer-body" class="drawer-body">
-      <!-- Comments rendered here -->
-    </div>
-    <div id="typing-indicator-container" class="is-hidden" style="padding: 0 1.5rem 1rem; background: var(--paper);">
-      <div class="typing-indicator">
-        <div class="typing-dots">
-          <div class="typing-dot"></div>
-          <div class="typing-dot"></div>
-          <div class="typing-dot"></div>
-        </div>
-        <span style="font-size: .75rem; font-weight: 500; color: var(--muted);"><span id="typing-user">Maha</span> is typing...</span>
-      </div>
-    </div>
-    <div class="drawer-footer">
-      <form id="comment-form" style="display: flex; flex-direction: column; gap: 0.8rem;">
         <div class="field">
-          <textarea id="comment-input" placeholder="Type a message..." style="min-height: 80px;"></textarea>
+          <label>Task scope</label>
+          <div class="scope-row">
+            <button type="button" class="scope-btn active" id="scope-personal" onclick="setScope('personal')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              Personal
+            </button>
+            <button type="button" class="scope-btn" id="scope-group" onclick="setScope('group')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Group
+            </button>
+          </div>
+          <input type="hidden" id="taskScope" value="personal"/>
         </div>
-        <button type="submit" class="btn-save">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13"/><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          Post Message
+
+        <div class="field-row">
+          <div class="field">
+            <label for="taskType">Type</label>
+            <select id="taskType">
+              <option value="deadline">Deadline task</option>
+              <option value="reminder">Reminder</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="status">Status</label>
+            <select id="status">
+              <option value="Pending">Pending</option>
+              <option value="Ongoing">Ongoing</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="title">Title</label>
+          <input id="title" required placeholder="What needs to be done?"/>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="category">Category</label>
+            <input id="category" placeholder="UI, Backend…" required/>
+          </div>
+          <div class="field">
+            <label for="priority">Priority</label>
+            <select id="priority">
+              <option value="High">High</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="deadline">Deadline</label>
+          <input id="deadline" type="date"/>
+        </div>
+
+        <div class="field">
+          <label for="description">Description</label>
+          <textarea id="description" required placeholder="Describe the task…"></textarea>
+        </div>
+
+        <div class="field" id="group-field" style="display:none">
+          <label for="groupId">Group</label>
+          <select id="groupId">
+            <option value="">— select group —</option>
+            <option>Frontend Team</option>
+            <option>Backend Squad</option>
+            <option>Design Circle</option>
+          </select>
+        </div>
+
+        <div class="field" id="assign-field" style="display:none">
+          <label for="assignedTo">Assign to</label>
+          <select id="assignedTo">
+            <option value="">— select member —</option>
+            <option>Ahmed L.</option>
+            <option>Sara M.</option>
+            <option>Khalid R.</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="progressNote">Progress note <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted-2)">(optional)</span></label>
+          <textarea id="progressNote" placeholder="Optional starting note or update…"></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit" id="save-btn">
+          Save task
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </button>
+
       </form>
     </div>
-  </aside>
-</div>
+
+    <!-- TASK LISTS -->
+    <div class="lists-col">
+
+      <!-- Personal -->
+      <div class="task-panel" style="animation-delay:0.22s">
+        <div class="task-panel-header">
+          <div class="panel-title-row">
+            <div class="panel-icon icon-personal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
+            <span class="panel-name">Personal tasks</span>
+            <span class="task-count-badge" id="personal-count">3</span>
+          </div>
+          <div class="filter-bar" style="padding:0;border-bottom:none;background:transparent;gap:0.25rem;">
+            <button class="filter-tab active" onclick="filterTasks(this,'personal','all')">All</button>
+            <button class="filter-tab" onclick="filterTasks(this,'personal','pending')">Pending</button>
+            <button class="filter-tab" onclick="filterTasks(this,'personal','ongoing')">Ongoing</button>
+            <button class="filter-tab" onclick="filterTasks(this,'personal','completed')">Done</button>
+          </div>
+        </div>
+        <div class="task-list" id="personal-tasks">
+
+          <div class="task-card s-pending" data-status="pending" data-scope="personal">
+            <div class="task-card-top">
+              <div class="task-card-left">
+                <div class="task-title">Research component libraries</div>
+                <div class="task-meta">
+                  <span class="task-cat">Research</span>
+                  <div class="priority-dot p-med"></div>
+                  <span class="task-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Apr 25, 2025</span>
+                </div>
+                <div class="task-desc">Look into Tailwind, Shadcn, and Radix for the frontend layer. Compare DX and bundle size.</div>
+              </div>
+              <span class="status-badge badge-pending"><span class="s-dot"></span>Pending</span>
+            </div>
+            <div class="task-actions">
+              <button class="action-btn-sm" onclick="editTask(this)">Edit</button>
+              <button class="action-btn-sm discuss" onclick="openDrawer(this)">Discussion</button>
+              <button class="action-btn-sm del" onclick="deleteTask(this)">Delete</button>
+            </div>
+          </div>
+
+          <div class="task-card s-ongoing" data-status="ongoing" data-scope="personal">
+            <div class="task-card-top">
+              <div class="task-card-left">
+                <div class="task-title">Set up local dev environment</div>
+                <div class="task-meta">
+                  <span class="task-cat">Setup</span>
+                  <div class="priority-dot p-high"></div>
+                  <span class="task-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Apr 22, 2025</span>
+                </div>
+                <div class="task-desc">Install Node, configure Vite, and wire up the project skeleton.</div>
+                <button class="note-toggle" onclick="toggleNote(this)">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  Show progress note
+                </button>
+                <div class="task-note">Node 20 LTS installed. Vite config done. Still need to configure path aliases.</div>
+              </div>
+              <span class="status-badge badge-ongoing"><span class="s-dot"></span>Ongoing</span>
+            </div>
+            <div class="task-actions">
+              <button class="action-btn-sm" onclick="editTask(this)">Edit</button>
+              <button class="action-btn-sm discuss" onclick="openDrawer(this)">Discussion</button>
+              <button class="action-btn-sm del" onclick="deleteTask(this)">Delete</button>
+            </div>
+          </div>
+
+          <div class="task-card s-completed" data-status="completed" data-scope="personal">
+            <div class="task-card-top">
+              <div class="task-card-left">
+                <div class="task-title">Create project repo and branch strategy</div>
+                <div class="task-meta">
+                  <span class="task-cat">Setup</span>
+                  <div class="priority-dot p-low"></div>
+                </div>
+                <div class="task-desc">Init Git repo, set up main/dev/feature branch rules, add README.</div>
+              </div>
+              <span class="status-badge badge-completed"><span class="s-dot"></span>Done</span>
+            </div>
+            <div class="task-actions">
+              <button class="action-btn-sm" onclick="editTask(this)">Edit</button>
+              <button class="action-btn-sm discuss" onclick="openDrawer(this)">Discussion</button>
+              <button class="action-btn-sm del" onclick="deleteTask(this)">Delete</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Group -->
+      <div class="task-panel" style="animation-delay:0.32s">
+        <div class="task-panel-header">
+          <div class="panel-title-row">
+            <div class="panel-icon icon-group"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <span class="panel-name">Group tasks</span>
+            <span class="task-count-badge" id="group-count">5</span>
+          </div>
+          <div class="filter-bar" style="padding:0;border-bottom:none;background:transparent;gap:0.25rem;">
+            <button class="filter-tab active" onclick="filterTasks(this,'group','all')">All</button>
+            <button class="filter-tab" onclick="filterTasks(this,'group','pending')">Pending</button>
+            <button class="filter-tab" onclick="filterTasks(this,'group','ongoing')">Ongoing</button>
+            <button class="filter-tab" onclick="filterTasks(this,'group','completed')">Done</button>
+          </div>
+        </div>
+        <div class="role-bar">
+          <span class="role-bar-label">Role:</span>
+          <button class="filter-tab active" onclick="filterRole(this,'all')">All</button>
+          <button class="filter-tab" onclick="filterRole(this,'leader')">Leader</button>
+          <button class="filter-tab" onclick="filterRole(this,'editor')">Editor</button>
+          <button class="filter-tab" onclick="filterRole(this,'member')">Member</button>
+        </div>
+        <div class="task-list" id="group-tasks">
+
+          <div class="task-card s-pending" data-status="pending" data-scope="group">
+            <div class="task-card-top">
+              <div class="task-card-left">
+                <div class="task-title">Design login and register screens</div>
+                <div class="task-meta">
+                  <span class="task-cat">UI</span>
+                  <div class="priority-dot p-high"></div>
+                  <span class="task-due overdue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Apr 18 — overdue</span>
+                </div>
+                <div class="task-desc">Figma wireframes for auth flow. Both mobile and desktop layouts required.</div>
+                <div class="assignee-row"><div class="assignee-av" style="background:#2563ba">SM</div><span class="assignee-name">Sara M.</span></div>
+              </div>
+              <span class="status-badge badge-pending"><span class="s-dot"></span>Pending</span>
+            </div>
+            <div class="task-actions">
+              <button class="action-btn-sm" onclick="editTask(this)">Edit</button>
+              <button class="action-btn-sm discuss" onclick="openDrawer(this)">Discussion</button>
+              <button class="action-btn-sm del" onclick="deleteTask(this)">Delete</button>
+            </div>
+          </div>
+
+          <div class="task-card s-ongoing" data-status="ongoing" data-scope="group">
+            <div class="task-card-top">
+              <div class="task-card-left">
+                <div class="task-title">Build task CRUD API layer</div>
+                <div class="task-meta">
+                  <span class="task-cat">Backend</span>
+                  <div class="priority-dot p-high"></div>
+                  <span class="task-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Apr 28, 2025</span>
+                </div>
+                <div class="task-desc">LocalStorage adapter for create, read, update, and delete task operations.</div>
+                <div class="assignee-row"><div class="assignee-av" style="background:var(--accent)">AL</div><span class="assignee-name">Ahmed L.</span></div>
+                <button class="note-toggle" onclick="toggleNote(this)">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  Show progress note
+                </button>
+                <div class="task-note">Read/list done. Write and delete methods in review.</div>
+              </div>
+              <span class="status-badge badge-ongoing"><span class="s-dot"></span>Ongoing</span>
+            </div>
+            <div class="task-actions">
+              <button class="action-btn-sm" onclick="editTask(this)">Edit</button>
+              <button class="action-btn-sm discuss" onclick="openDrawer(this)">Discussion</button>
+              <button class="action-btn-sm del" onclick="deleteTask(this)">Delete</button>
+            </div>
+          </div>
+
+          <div class="task-card s-ongoing" data-status="ongoing" data-scope="group">
+            <div class="task-card-top">
+              <div class="task-card-left">
+                <div class="task-title">Write unit tests for task module</div>
+                <div class="task-meta">
+                  <span class="task-cat">Testing</span>
+                  <div class="priority-dot p-med"></div>
+                  <span class="task-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>May 2, 2025</span>
+                </div>
+                <div class="task-desc">Vitest + Testing Library. Cover create, edit, delete, and status update flows.</div>
+                <div class="assignee-row"><div class="assignee-av" style="background:#1a7a4a">KR</div><span class="assignee-name">Khalid R.</span></div>
+              </div>
+              <span class="status-badge badge-ongoing"><span class="s-dot"></span>Ongoing</span>
+            </div>
+            <div class="task-actions">
+              <button class="action-btn-sm" onclick="editTask(this)">Edit</button>
+              <button class="action-btn-sm discuss" onclick="openDrawer(this)">Discussion</button>
+              <button class="action-btn-sm del" onclick="deleteTask(this)">Delete</button>
+            </div>
+          </div>
+
+          <div class="task-card s-pending" data-status="pending" data-scope="group">
+            <div class="task-card-top">
+              <div class="task-card-left">
+                <div class="task-title">Prepare final presentation slides</div>
+                <div class="task-meta">
+                  <span class="task-cat">Documentation</span>
+                  <div class="priority-dot p-med"></div>
+                  <span class="task-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>May 10, 2025</span>
+                </div>
+                <div class="task-desc">10-slide deck covering architecture, features, and demo walkthrough.</div>
+                <div class="assignee-row"><div class="assignee-av" style="background:var(--accent)">AL</div><span class="assignee-name">Ahmed L.</span></div>
+              </div>
+              <span class="status-badge badge-pending"><span class="s-dot"></span>Pending</span>
+            </div>
+            <div class="task-actions">
+              <button class="action-btn-sm" onclick="editTask(this)">Edit</button>
+              <button class="action-btn-sm discuss" onclick="openDrawer(this)">Discussion</button>
+              <button class="action-btn-sm del" onclick="deleteTask(this)">Delete</button>
+            </div>
+          </div>
+
+          <div class="task-card s-completed" data-status="completed" data-scope="group">
+            <div class="task-card-top">
+              <div class="task-card-left">
+                <div class="task-title">Finalize group name and project scope</div>
+                <div class="task-meta">
+                  <span class="task-cat">Planning</span>
+                  <div class="priority-dot p-low"></div>
+                </div>
+                <div class="task-desc">Agreed on project name, scope, tech stack, and responsibility split.</div>
+                <div class="assignee-row"><div class="assignee-av" style="background:var(--accent)">AL</div><span class="assignee-name">Ahmed L.</span></div>
+              </div>
+              <span class="status-badge badge-completed"><span class="s-dot"></span>Done</span>
+            </div>
+            <div class="task-actions">
+              <button class="action-btn-sm" onclick="editTask(this)">Edit</button>
+              <button class="action-btn-sm discuss" onclick="openDrawer(this)">Discussion</button>
+              <button class="action-btn-sm del" onclick="deleteTask(this)">Delete</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- end lists-col -->
+  </div><!-- end main-grid -->
+</main>
+
+<!-- DISCUSSION DRAWER -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-eyebrow">Discussion Thread</div>
+      <div class="drawer-title" id="drawer-title">Task Title</div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body" id="drawer-body">
+    <div class="comment">
+      <div class="comment-av" style="background:var(--accent)">JD</div>
+      <div class="comment-bubble">
+        <div class="comment-author">Jamie D.</div>
+        <div class="comment-text">Started working on this. Will update when first milestone is done.</div>
+        <div class="comment-time">Today, 10:24 AM</div>
+      </div>
+    </div>
+    <div class="comment">
+      <div class="comment-av" style="background:#2563ba">SM</div>
+      <div class="comment-bubble">
+        <div class="comment-author">Sara M.</div>
+        <div class="comment-text">Looks good — let me know if you need the design assets from the Figma file.</div>
+        <div class="comment-time">Today, 11:05 AM</div>
+      </div>
+    </div>
+  </div>
+  <div id="typing-wrap" style="padding:0 1.25rem 0.75rem;background:var(--paper);display:none">
+    <div class="typing-ind">
+      <div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+      <span>Sara is typing…</span>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <form id="comment-form" onsubmit="postComment(event)">
+      <textarea class="comment-input-field" id="comment-input" placeholder="Type a message…" rows="3"></textarea>
+      <button type="submit" class="btn-submit" style="margin-top:0.75rem">
+        Post message
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </form>
+  </div>
+</aside>
 
 <script>
-  /* ── Scope toggle ── */
-  function setScope(val) {
-    document.getElementById('taskScope').value = val;
-    document.getElementById('scope-personal').classList.toggle('active', val === 'personal');
-    document.getElementById('scope-group').classList.toggle('active', val === 'group');
-    const isGroup = val === 'group';
-    document.getElementById('group-field').style.display = isGroup ? '' : 'none';
-    document.getElementById('assign-field').style.display = isGroup ? '' : 'none';
+  /* cursor */
+  const cur=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';});
+  (function loop(){rx+=(mx-rx)*0.13;ry+=(my-ry)*0.13;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
+  function addHover(el){el.addEventListener('mouseenter',()=>{cur.style.width='16px';cur.style.height='16px';ring.style.width='44px';ring.style.height='44px';ring.style.opacity='.2';});el.addEventListener('mouseleave',()=>{cur.style.width='10px';cur.style.height='10px';ring.style.width='30px';ring.style.height='30px';ring.style.opacity='.4';});}
+  document.querySelectorAll('a,button,input,select,textarea,.task-card,.nav-item').forEach(addHover);
+
+  document.getElementById('topbar-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+  /* scope */
+  function setScope(val){
+    document.getElementById('taskScope').value=val;
+    document.getElementById('scope-personal').classList.toggle('active',val==='personal');
+    document.getElementById('scope-group').classList.toggle('active',val==='group');
+    document.getElementById('group-field').style.display=val==='group'?'':'none';
+    document.getElementById('assign-field').style.display=val==='group'?'':'none';
   }
 
-  setScope('personal');
-
-  /* ── Filter tabs ── */
-  function filterTasks(btn, panelId, status) {
-    const panel = document.getElementById(panelId + '-tasks');
-    const header = btn.closest('.task-panel-header');
-    header.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  /* filter */
+  function filterTasks(btn,panelId,status){
+    const panel=document.getElementById(panelId+'-tasks');
+    btn.closest('.filter-bar,div').querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));
     btn.classList.add('active');
-
-    panel.querySelectorAll('.task-card').forEach(card => {
-      const match = status === 'all' || card.dataset.status === status;
-      card.style.display = match ? '' : 'none';
+    panel.querySelectorAll('.task-card').forEach(c=>{
+      c.style.display=(status==='all'||c.dataset.status===status)?'':'none';
     });
   }
-
-  /* ── Note toggle ── */
-  function toggleNote(btn) {
-    const note = btn.nextElementSibling;
-    const open = note.classList.toggle('open');
-    btn.textContent = (open ? '▾ Hide' : '▸ Show') + ' progress note';
+  function filterRole(btn,role){
+    btn.closest('.role-bar').querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
   }
 
-  /* ── Edit task ── */
-  function editTask(btn) {
-    const card = btn.closest('.task-card');
-    const title = card.querySelector('.task-card-title').textContent;
-    const desc  = card.querySelector('.task-desc').textContent;
-    document.getElementById('title').value = title;
-    document.getElementById('description').value = desc;
-    document.getElementById('task-form-title').textContent = 'Edit task';
-    document.getElementById('edit-indicator').style.display = '';
-    document.getElementById('cancel-edit-button').classList.remove('is-hidden');
-    document.getElementById('save-btn').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="20 6 9 17 4 12"/></svg> Update task`;
-    document.querySelector('.form-card').scrollIntoView({ behavior:'smooth', block:'start' });
+  /* note toggle */
+  function toggleNote(btn){
+    const note=btn.nextElementSibling;
+    const open=note.classList.toggle('open');
+    const arrow=btn.querySelector('svg');
+    if(arrow) arrow.style.transform=open?'rotate(180deg)':'';
+    btn.childNodes[btn.childNodes.length-1].textContent=(open?' Hide ':' Show ')+' progress note';
   }
 
-  /* ── Cancel edit ── */
-  function cancelEdit() {
+  /* edit task */
+  let editTarget=null;
+  function editTask(btn){
+    editTarget=btn.closest('.task-card');
+    document.getElementById('title').value=editTarget.querySelector('.task-title').textContent.trim();
+    document.getElementById('description').value=editTarget.querySelector('.task-desc').textContent.trim();
+    const status=editTarget.querySelector('.status-badge').textContent.trim();
+    document.getElementById('status').value=status.includes('Pending')?'Pending':status.includes('Ongoing')?'Ongoing':'Completed';
+    document.getElementById('form-title').textContent='Edit task';
+    document.getElementById('editing-badge').classList.remove('hidden');
+    document.getElementById('cancel-edit-btn').classList.remove('hidden');
+    document.getElementById('save-btn').innerHTML='Update task <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="20 6 9 17 4 12"/></svg>';
+    document.getElementById('form-panel').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  function cancelEdit(){
+    editTarget=null;
     document.getElementById('task-form').reset();
-    document.getElementById('task-form-title').textContent = 'Create a task';
-    document.getElementById('edit-indicator').style.display = 'none';
-    document.getElementById('cancel-edit-button').classList.add('is-hidden');
-    document.getElementById('save-btn').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save task`;
+    document.getElementById('form-title').textContent='Create a task';
+    document.getElementById('editing-badge').classList.add('hidden');
+    document.getElementById('cancel-edit-btn').classList.add('hidden');
+    document.getElementById('save-btn').innerHTML='Save task <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
     setScope('personal');
   }
 
-  /* ── Delete task ── */
-  function deleteTask(btn) {
-    const card = btn.closest('.task-card');
-    card.style.transition = 'opacity .25s, transform .25s';
-    card.style.opacity = '0';
-    card.style.transform = 'translateX(-16px)';
-    setTimeout(() => card.remove(), 260);
+  /* delete */
+  function deleteTask(btn){
+    const card=btn.closest('.task-card');
+    card.style.transition='opacity .25s,transform .25s';
+    card.style.opacity='0'; card.style.transform='translateX(-16px)';
+    setTimeout(()=>card.remove(),260);
+    flash('Task removed.','success');
   }
 
-  /* ── Save (demo feedback) ── */
-  function handleSave(e) {
+  /* save */
+  document.getElementById('task-form').addEventListener('submit',e=>{
     e.preventDefault();
-    const btn = document.getElementById('save-btn');
-    const original = btn.innerHTML;
-    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" style="stroke-dasharray:30;stroke-dashoffset:30;animation:checkDraw .4s .05s forwards"><polyline points="4,12 9,17 20,7"/></svg> Saved!`;
-    btn.style.background = 'var(--teal-dark)';
-    setTimeout(() => {
-      btn.innerHTML = original;
-      btn.style.background = '';
-      cancelEdit();
-    }, 2200);
+    const btn=document.getElementById('save-btn');
+    const orig=btn.innerHTML;
+    btn.classList.add('success');
+    btn.innerHTML='✓ Saved!';
+    setTimeout(()=>{btn.classList.remove('success');btn.innerHTML=orig;cancelEdit();},2000);
+    flash(editTarget?'Task updated successfully!':'Task created successfully!','success');
+  });
+
+  /* flash */
+  function flash(msg,type='success'){
+    const c=document.getElementById('flash-container');
+    c.innerHTML=`<div class="flash flash-${type}">${type==='success'?'✓':'✕'} ${msg}</div>`;
+    setTimeout(()=>{c.innerHTML='';},3500);
   }
 
-  /* ── Ripple on save btn ── */
-  document.getElementById('save-btn').addEventListener('click', function(e) {
-    const r = document.createElement('span');
-    r.className = 'btn-ripple';
-    const d = Math.max(this.offsetWidth, this.offsetHeight);
-    const rect = this.getBoundingClientRect();
-    r.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX-rect.left-d/2}px;top:${e.clientY-rect.top-d/2}px;position:absolute;pointer-events:none;`;
-    this.appendChild(r);
-    setTimeout(() => r.remove(), 700);
+  /* search */
+  document.getElementById('task-search').addEventListener('input',function(){
+    const q=this.value.toLowerCase();
+    document.querySelectorAll('.task-card').forEach(c=>{
+      const title=c.querySelector('.task-title').textContent.toLowerCase();
+      c.style.display=title.includes(q)?'':'none';
+    });
   });
 
-  /* ── Stagger task cards on load ── */
-  document.querySelectorAll('.task-card').forEach((card, i) => {
-    card.style.animationDelay = `${.45 + i * .06}s`;
-  });
+  /* stagger cards */
+  document.querySelectorAll('.task-card').forEach((c,i)=>{ c.style.animationDelay=(0.3+i*0.055)+'s'; });
 
-  const mobileNavToggle = document.getElementById('mobile-nav-toggle');
-  const mobileNavBackdrop = document.getElementById('mobile-nav-backdrop');
-  const mobileNavLinks = document.querySelectorAll('.sidebar a');
-
-  function setMobileNav(open) {
-    document.body.classList.toggle('nav-open', open);
-    mobileNavToggle?.setAttribute('aria-expanded', String(open));
+  /* drawer */
+  function openDrawer(btn){
+    const title=btn.closest('.task-card').querySelector('.task-title').textContent.trim();
+    document.getElementById('drawer-title').textContent=title;
+    document.getElementById('drawer-overlay').classList.add('open');
+    document.getElementById('drawer').classList.add('open');
+    // simulate typing indicator
+    setTimeout(()=>{
+      const tw=document.getElementById('typing-wrap');
+      tw.style.display='';
+      setTimeout(()=>{tw.style.display='none';},2800);
+    },1500);
   }
-
-  mobileNavToggle?.addEventListener('click', () => {
-    setMobileNav(!document.body.classList.contains('nav-open'));
-  });
-
-  mobileNavBackdrop?.addEventListener('click', () => setMobileNav(false));
-  mobileNavLinks.forEach((link) => link.addEventListener('click', () => setMobileNav(false)));
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') setMobileNav(false);
-  });
-
-  window.addEventListener('resize', () => {
-    if (window.innerWidth > 980) setMobileNav(false);
-  });
-
-  document.title = 'Tasks - Taskly';
-  document.getElementById('category')?.setAttribute('placeholder', 'UI, Testing...');
-  document.getElementById('description')?.setAttribute('placeholder', 'Describe the task...');
-  document.getElementById('progressNote')?.setAttribute('placeholder', 'Optional starting note or update...');
-  document.querySelector('#groupId option[value=""]')?.replaceChildren('- select group -');
-  document.querySelector('#assignedTo option[value=""]')?.replaceChildren('- select member -');
-
-  function toggleNote(btn) {
-    const note = btn.nextElementSibling;
-    const open = note.classList.toggle('open');
-    btn.textContent = (open ? 'Hide' : 'Show') + ' progress note';
+  function closeDrawer(){
+    document.getElementById('drawer-overlay').classList.remove('open');
+    document.getElementById('drawer').classList.remove('open');
   }
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer();});
 
-  document.querySelectorAll('.note-toggle').forEach((btn) => {
-    const isOpen = btn.nextElementSibling?.classList.contains('open');
-    btn.textContent = (isOpen ? 'Hide' : 'Show') + ' progress note';
-  });
+  function postComment(e){
+    e.preventDefault();
+    const val=document.getElementById('comment-input').value.trim();
+    if(!val)return;
+    const body=document.getElementById('drawer-body');
+    const div=document.createElement('div');
+    div.className='comment';
+    div.innerHTML=`<div class="comment-av" style="background:var(--accent)">JD</div><div class="comment-bubble"><div class="comment-author">Jamie D.</div><div class="comment-text">${val}</div><div class="comment-time">Just now</div></div>`;
+    body.appendChild(div);
+    body.scrollTop=body.scrollHeight;
+    document.getElementById('comment-input').value='';
+  }
 </script>
-
-<script type="module" src="assets/js/pages/tasks.js"></script>
+<script type="module" src="assets/js/pages/tasks.js" onerror="void 0"></script>
 </body>
 </html>

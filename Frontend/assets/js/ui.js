@@ -191,8 +191,8 @@ function renderAppChrome(activePage, user) {
     renderAppChrome(activePage, user);
   });
 
-  sidebar.querySelector("#logout-button")?.addEventListener("click", () => {
-    logoutUser();
+  sidebar.querySelector("#logout-button")?.addEventListener("click", async () => {
+    await logoutUser();
     window.location.href = "login.html";
   });
 }

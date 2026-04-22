@@ -5,7 +5,7 @@ import { getGroupProgress, getUserDashboardData } from "../dashboard.js";
 import { createEmptyState, createTaskCard, escapeHtml, formatDate, renderProgressMarkup, renderAppChrome } from "../ui.js";
 import { getTaskAssigneeName, getTaskAssigneeRole } from "../tasks.js";
 
-let user = bootstrapProtectedPage({ pageKey: "dashboard" });
+let user = await bootstrapProtectedPage({ pageKey: "dashboard" });
 
 if (user) {
   const heroStatsContainer = document.querySelector("#dashboard-hero-stats");

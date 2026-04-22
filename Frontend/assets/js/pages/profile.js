@@ -4,7 +4,7 @@ import { getUserGroups, getUserGroupRole } from "../groups.js";
 import { getGroupProgress } from "../dashboard.js";
 import { escapeHtml } from "../ui.js";
 
-const user = bootstrapProtectedPage({ pageKey: "profile" });
+const user = await bootstrapProtectedPage({ pageKey: "profile" });
 
 if (user) {
   const form = document.querySelector("#profile-form");
@@ -153,12 +153,12 @@ if (user) {
     reader.readAsDataURL(file);
   });
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const btn = form.querySelector('[type="submit"]');
 
     try {
-      updateCurrentUserProfile(user.id, {
+      await updateCurrentUserProfile(user.id, {
         name: nameInput.value,
         profilePicture: uploadedImage || urlInput.value.trim(),
       });
@@ -183,10 +183,10 @@ if (user) {
     }
   });
 
-  deleteBtn?.addEventListener("click", () => {
+  deleteBtn?.addEventListener("click", async () => {
     const confirmMsg = "Are you sure you want to delete your account? This will remove all your data from the demo.";
     if (confirm(confirmMsg)) {
-      deleteUserAccount(user.id);
+      await deleteUserAccount(user.id);
       window.location.href = "index.html";
     }
   });
