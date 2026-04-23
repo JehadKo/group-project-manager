@@ -1,12 +1,12 @@
 # Student Group Project Manager
 
-A front-end semester project website for managing university group projects using plain `HTML`, `CSS`, and `JavaScript`.
+A full-stack semester project for managing university group projects using a Flask backend, SQLite database, and a high-end JavaScript frontend.
 
 This prototype helps students organize group work more clearly by supporting:
 - account registration and login
 - group creation and joining by invite code
 - role-based access for students, group leaders, and system administrators
-- personal and group task management
+- task management with GitHub LoC (Lines of Code) synchronization
 - project progress dashboards
 - local backup export for demo purposes
 
@@ -46,9 +46,10 @@ It uses browser `localStorage` instead of a backend so the whole system can be d
 - `HTML5`
 - `CSS3`
 - `JavaScript (ES Modules)`
-- Browser `localStorage`
+- `Flask (Python)`
+- `SQLite`
 
-No backend framework or database is required for this version.
+The project now utilizes a Flask backend and a SQLite database for persistent storage and real-time coordination features.
 
 ## Pages Included
 

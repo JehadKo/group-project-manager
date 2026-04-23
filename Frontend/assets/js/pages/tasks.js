@@ -1,5 +1,5 @@
 import { bootstrapProtectedPage } from "../app.js";
-import { setFlash } from "../auth.js";
+import { setFlash, isAdmin } from "../auth.js";
 import { canCreateGroupTask, getGroupMembers, getUserGroups, getGroupById } from "../groups.js";
 import {
   addTaskComment,
@@ -9,11 +9,13 @@ import {
   getTaskAssigneeRole,
   getTaskById,
   getUserVisibleTasks,
+  syncTaskWithGithub,
   updateTask,
   updateTaskStatus,
   canEditTask,
   canUpdateTaskStatus,
 } from "../tasks.js";
+import { getComplexityTargets, saveComplexityTargets } from "../storage.js";
 import { createEmptyState, createTaskCard, escapeHtml, getAvatarMarkup, formatDateTime, renderFlash } from "../ui.js";
 
 const user = await bootstrapProtectedPage({ pageKey: "tasks" });
@@ -34,6 +36,12 @@ if (user) {
   const roleFilterContainer = document.querySelector("#group-role-filters");
   const searchInput = document.querySelector("#task-search");
   const sortSelect = document.querySelector("#task-sort");
+  const categoryFilterSelect = document.querySelector("#task-category-filter");
+  const priorityFilterSelect = document.querySelector("#task-priority-filter");
+  const startDateInput = document.querySelector("#filter-start-date");
+  const endDateInput = document.querySelector("#filter-end-date");
+  const clearFiltersBtn = document.querySelector("#clear-filters-btn");
+  const downloadReportBtn = document.querySelector("#download-report-btn");
   
   const drawer = document.querySelector("#discussion-drawer");
   const drawerBackdrop = document.querySelector("#drawer-backdrop");
@@ -44,11 +52,31 @@ if (user) {
   const typingIndicator = document.querySelector("#typing-indicator-container");
   const typingUserLabel = document.querySelector("#typing-user");
 
+  const bulkBar = document.querySelector("#bulk-actions-bar");
+  const selectedCountLabel = document.querySelector("#selected-count");
+  const bulkApplyBtn = document.querySelector("#apply-bulk");
+  const bulkDeleteBtn = document.querySelector("#bulk-delete");
+  const clearSelectionBtn = document.querySelector("#clear-selection");
+
+  const bulkDeleteModal = document.querySelector("#bulk-delete-modal");
+  const cancelBulkDeleteBtn = document.querySelector("#cancel-bulk-delete");
+  const confirmBulkDeleteBtn = document.querySelector("#confirm-bulk-delete");
+
+  const settingsBtn = document.querySelector("#complexity-settings-btn");
+  const settingsDrawer = document.querySelector("#settings-drawer");
+  const settingsOverlay = document.querySelector("#settings-overlay");
+  const complexityForm = document.querySelector("#complexity-targets-form");
+
   let editingTaskId = null;
   let activeDiscussionTaskId = null;
   let activeRoleFilter = "all";
   let activeSearchQuery = "";
   let activeSort = "deadline";
+  let activeCategoryFilter = "all";
+  let activePriorityFilter = "all";
+  let activeStartDate = "";
+  let activeEndDate = "";
+  const selectedTaskIds = new Set();
   const readBySimulation = new Set();
 
   function showInlineFlash(message, type = "success") {
@@ -121,6 +149,8 @@ if (user) {
     document.querySelector("#title").value = task.title;
     document.querySelector("#category").value = task.category;
     document.querySelector("#priority").value = task.priority || "Medium";
+    if (document.querySelector("#complexitySize")) document.querySelector("#complexitySize").value = task.complexitySize || "M";
+    if (document.querySelector("#githubBranch")) document.querySelector("#githubBranch").value = task.githubBranch || "";
     document.querySelector("#description").value = task.description;
     document.querySelector("#deadline").value = task.deadline ? new Date(task.deadline).toISOString().slice(0, 10) : "";
     document.querySelector("#status").value = task.status;
@@ -209,12 +239,68 @@ if (user) {
     }, 1200);
   }
 
+  function updateCategoryFilterOptions(tasks) {
+    if (!categoryFilterSelect) return;
+    
+    const categories = [...new Set(tasks.map((t) => t.category).filter(Boolean))].sort();
+
+    categoryFilterSelect.innerHTML = `
+      <option value="all">All Categories</option>
+      ${categories.map((cat) => `<option value="${escapeHtml(cat)}" ${cat === activeCategoryFilter ? "selected" : ""}>${escapeHtml(cat)}</option>`).join("")}
+    `;
+
+    // If the active filter is no longer in the list of available categories, reset it to "all"
+    if (activeCategoryFilter !== "all" && !categories.includes(activeCategoryFilter)) {
+      activeCategoryFilter = "all";
+      renderTaskSections();
+    }
+  }
+
+  function updateBulkBar() {
+    if (selectedTaskIds.size > 0) {
+      bulkBar?.classList.remove("is-hidden");
+      if (selectedCountLabel) selectedCountLabel.textContent = selectedTaskIds.size;
+    } else {
+      bulkBar?.classList.add("is-hidden");
+    }
+  }
+
   function renderTaskSections() {
     const tasks = getUserVisibleTasks(user);
+    updateCategoryFilterOptions(tasks);
 
-    // 1. Handle "Due Today" High Priority Section
+    const filteredTasks = tasks.filter((task) => {
+      const query = activeSearchQuery.toLowerCase();
+      const matchesSearch = !query || 
+             task.title.toLowerCase().includes(query) || 
+             task.description.toLowerCase().includes(query);
+
+      const matchesCategory = activeCategoryFilter === "all" || task.category === activeCategoryFilter;
+      const matchesPriority = activePriorityFilter === "all" || (task.priority || "Medium") === activePriorityFilter;
+
+      return matchesSearch && matchesCategory && matchesPriority;
+    });
+
+    // Update Print Summary Metrics (Requirement 4.2)
+    const total = filteredTasks.length;
+    const completed = filteredTasks.filter(t => t.status === "Completed").length;
+    const ongoing = filteredTasks.filter(t => t.status === "Ongoing").length;
+    const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const overdue = filteredTasks.filter(t => t.deadline && t.status !== "Completed" && new Date(t.deadline) < new Date()).length;
+
+    if (document.querySelector("#print-stat-total")) document.querySelector("#print-stat-total").textContent = total;
+    if (document.querySelector("#print-stat-rate")) document.querySelector("#print-stat-rate").textContent = rate + "%";
+    if (document.querySelector("#print-stat-ongoing")) document.querySelector("#print-stat-ongoing").textContent = ongoing;
+    if (document.querySelector("#print-stat-overdue")) document.querySelector("#print-stat-overdue").textContent = overdue;
+    if (document.querySelector("#report-date-range")) {
+      document.querySelector("#report-date-range").textContent = (activeStartDate || activeEndDate)
+        ? `Report Period: ${activeStartDate || 'Earliest'} to ${activeEndDate || 'Latest'}`
+        : `Full workspace audit as of ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`;
+    }
+
+    // 1. Handle "Due Today" High Priority Section (now respects global filters)
     const todayStr = new Date().toISOString().slice(0, 10);
-    const dueTodayTasks = tasks.filter((t) => {
+    const dueTodayTasks = filteredTasks.filter((t) => {
       if (!t.deadline || t.status === "Completed" || t.priority !== "High") return false;
       return new Date(t.deadline).toISOString().slice(0, 10) === todayStr;
     });
@@ -234,30 +320,6 @@ if (user) {
         dueTodaySection.classList.add("is-hidden");
       }
     }
-    
-    const filteredBySearch = tasks.filter((task) => {
-      const query = activeSearchQuery.toLowerCase();
-      return !query || 
-             task.title.toLowerCase().includes(query) || 
-             task.description.toLowerCase().includes(query);
-    });
-
-    const sortedTasks = filteredBySearch.sort((a, b) => {
-      if (activeSort === "deadline") {
-        const dateA = a.deadline ? new Date(a.deadline).getTime() : Infinity;
-        const dateB = b.deadline ? new Date(b.deadline).getTime() : Infinity;
-        return dateA - dateB;
-      }
-      if (activeSort === "priority") {
-        const levels = { High: 1, Medium: 2, Low: 3 };
-        return levels[a.priority || "Medium"] - levels[b.priority || "Medium"];
-      }
-      if (activeSort === "status") {
-        const order = { Pending: 1, Ongoing: 2, Completed: 3 };
-        return order[a.status] - order[b.status];
-      }
-      return 0;
-    });
 
     const personalTasks = sortedTasks.filter((task) => task.isPersonal);
     
@@ -298,6 +360,12 @@ if (user) {
             if (canEditTask(task, user)) {
               actions.push(`<button class="btn-ghost" data-action="edit" data-task-id="${task.id}" type="button">Edit</button>`);
               actions.push(`<button class="btn-danger" data-action="delete" data-task-id="${task.id}" type="button">Delete</button>`);
+            }
+
+            const group = getGroupById(task.groupId);
+            const isLeader = user.globalRole === "admin" || group?.leaderId === user.id;
+            if (isLeader && task.githubBranch) {
+              actions.push(`<button class="action-btn-sm" data-action="sync-github" data-task-id="${task.id}" type="button">Sync GitHub</button>`);
             }
 
             if (canUpdateTaskStatus(task, user)) {
@@ -354,6 +422,24 @@ if (user) {
       });
     });
 
+    document.querySelectorAll("[data-action='sync-github']").forEach((button) => {
+      button.addEventListener("click", async () => {
+        try {
+          const taskId = button.dataset.taskId;
+          button.disabled = true;
+          button.textContent = "Syncing...";
+          
+          await syncTaskWithGithub(taskId, user);
+          showInlineFlash("Task synchronized with GitHub.", "success");
+          renderTaskSections();
+        } catch (error) {
+          showInlineFlash(error.message, "error");
+          button.disabled = false;
+          button.textContent = "Sync GitHub";
+        }
+      });
+    });
+
     document.querySelectorAll("[data-action='view-discussion']").forEach((button) => {
       button.addEventListener("click", () => {
         openDiscussion(button.dataset.taskId);
@@ -401,6 +487,45 @@ if (user) {
     renderTaskSections();
   });
 
+  categoryFilterSelect?.addEventListener("change", (e) => {
+    activeCategoryFilter = e.target.value;
+    renderTaskSections();
+  });
+
+  priorityFilterSelect?.addEventListener("change", (e) => {
+    activePriorityFilter = e.target.value;
+    renderTaskSections();
+  });
+
+  startDateInput?.addEventListener("change", (e) => {
+    activeStartDate = e.target.value;
+    renderTaskSections();
+  });
+
+  endDateInput?.addEventListener("change", (e) => {
+    activeEndDate = e.target.value;
+    renderTaskSections();
+  });
+
+  clearFiltersBtn?.addEventListener("click", () => {
+    activeSearchQuery = "";
+    activeCategoryFilter = "all";
+    activePriorityFilter = "all";
+    activeStartDate = "";
+    activeEndDate = "";
+    
+    if (searchInput) searchInput.value = "";
+    if (categoryFilterSelect) categoryFilterSelect.value = "all";
+    if (priorityFilterSelect) priorityFilterSelect.value = "all";
+    if (startDateInput) startDateInput.value = "";
+    if (endDateInput) endDateInput.value = "";
+    
+    selectedTaskIds.clear();
+    updateBulkBar();
+    
+    renderTaskSections();
+  });
+
   taskScope.addEventListener("change", syncTaskScopeUi);
   taskType.addEventListener("change", syncTaskScopeUi);
   groupSelect.addEventListener("change", updateAssigneeOptions);
@@ -444,6 +569,8 @@ if (user) {
       status: formData.get("status"),
       category: formData.get("category"),
       priority: formData.get("priority"),
+      complexitySize: formData.get("complexitySize"),
+      githubBranch: formData.get("githubBranch"),
       assignedTo: formData.get("assignedTo"),
       groupId: formData.get("taskScope") === "group" ? formData.get("groupId") : null,
       isPersonal: formData.get("taskScope") !== "group",
@@ -464,6 +591,126 @@ if (user) {
     } catch (error) {
       showInlineFlash(error.message, "error");
     }
+  });
+
+  bulkApplyBtn?.addEventListener("click", async () => {
+    const status = document.querySelector("#bulk-status")?.value;
+    const category = document.querySelector("#bulk-category")?.value.trim();
+
+    if (!status && !category) {
+      showInlineFlash("Select a status or enter a category to update.", "info");
+      return;
+    }
+
+    const originalText = bulkApplyBtn.textContent;
+    bulkApplyBtn.disabled = true;
+    bulkApplyBtn.textContent = "Processing...";
+
+    const updates = {};
+    if (status) updates.status = status;
+    if (category) updates.category = category;
+
+    try {
+      const ids = Array.from(selectedTaskIds);
+      for (const id of ids) {
+        await updateTask(id, updates, user);
+      }
+      
+      showInlineFlash(`Successfully updated ${ids.length} tasks.`, "success");
+      selectedTaskIds.clear();
+      updateBulkBar();
+      renderTaskSections();
+      if (document.querySelector("#bulk-status")) document.querySelector("#bulk-status").value = "";
+      if (document.querySelector("#bulk-category")) document.querySelector("#bulk-category").value = "";
+    } catch (error) {
+      showInlineFlash(error.message, "error");
+    } finally {
+      bulkApplyBtn.disabled = false;
+      bulkApplyBtn.textContent = originalText;
+    }
+  });
+
+  clearSelectionBtn?.addEventListener("click", () => {
+    selectedTaskIds.clear();
+    updateBulkBar();
+    renderTaskSections();
+  });
+
+  bulkDeleteBtn?.addEventListener("click", () => {
+    if (selectedTaskIds.size > 0) {
+      bulkDeleteModal?.classList.add("open");
+    }
+  });
+
+  cancelBulkDeleteBtn?.addEventListener("click", () => {
+    bulkDeleteModal?.classList.remove("open");
+  });
+
+  confirmBulkDeleteBtn?.addEventListener("click", async () => {
+    const originalText = confirmBulkDeleteBtn.textContent;
+    confirmBulkDeleteBtn.disabled = true;
+    confirmBulkDeleteBtn.textContent = "Deleting...";
+
+    try {
+      const ids = Array.from(selectedTaskIds);
+      for (const id of ids) {
+        await deleteTask(id, user);
+      }
+      
+      showInlineFlash(`Successfully deleted ${ids.length} tasks.`, "success");
+      selectedTaskIds.clear();
+      updateBulkBar();
+      renderTaskSections();
+      bulkDeleteModal?.classList.remove("open");
+    } catch (error) {
+      showInlineFlash(error.message, "error");
+    } finally {
+      confirmBulkDeleteBtn.disabled = false;
+      confirmBulkDeleteBtn.textContent = originalText;
+    }
+  });
+
+  // Complexity Settings Logic
+  const isLeader = isAdmin(user) || getUserGroups(user).some(g => g.leaderId === user.id);
+  if (isLeader && downloadReportBtn) {
+    downloadReportBtn.classList.remove("hidden");
+    downloadReportBtn.addEventListener("click", () => window.print());
+  }
+
+  if (isLeader && settingsBtn) {
+    settingsBtn.classList.remove("hidden");
+    
+    settingsBtn.addEventListener("click", () => {
+      const targets = getComplexityTargets();
+      Object.keys(targets).forEach(key => {
+        const input = complexityForm.querySelector(`[name="${key}"]`);
+        if (input) input.value = targets[key];
+      });
+      settingsDrawer.classList.add("open");
+      settingsOverlay.classList.add("open");
+    });
+  }
+
+  function closeSettings() {
+    settingsDrawer?.classList.remove("open");
+    settingsOverlay?.classList.remove("open");
+  }
+
+  document.querySelector("#close-settings")?.addEventListener("click", closeSettings);
+  settingsOverlay?.addEventListener("click", closeSettings);
+
+  complexityForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const formData = new FormData(complexityForm);
+    const newTargets = {};
+    formData.forEach((value, key) => {
+      newTargets[key] = parseInt(value, 10);
+    });
+
+    saveComplexityTargets(newTargets);
+    showInlineFlash("LoC targets updated successfully.", "success");
+    closeSettings();
+    renderTaskSections();
   });
 
   populateGroupOptions();

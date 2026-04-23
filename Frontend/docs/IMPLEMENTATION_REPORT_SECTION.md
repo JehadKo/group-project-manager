@@ -2,22 +2,29 @@
 
 ## 1. Implementation Overview
 
-The Student Group Project Manager was implemented as a front-end web application using plain HTML, CSS, and JavaScript. The goal of the implementation was to provide a working prototype that demonstrates the core system requirements for managing university group projects without relying on a backend server.
+The Student Group Project Manager (Taskly) is a full-stack web application designed to streamline university group collaborations. Originally a front-end prototype, the system now features a robust Flask backend and a SQLite database to ensure data persistence, secure recovery flows, and real-time GitHub integration.
 
 The system supports three stakeholder roles:
 - Student
 - Group Leader
 - System Administrator
 
-To make the prototype easy to demonstrate, all application data is stored in the browser using `localStorage`. This allows the system to simulate persistent behavior such as user accounts, groups, tasks, session state, and progress logs.
+## 3.2 Requirements Elicitation Method
+
+The requirements were gathered using the following methods:
+1. **Structured Interview**: Conducted with a university student to identify background experiences, common bottlenecks in group projects, and both functional and non-functional expectations.
+2. **Team Brainstorming**: A collaborative session to refine identified needs and expand the system scope to include technical integrations like GitHub.
+3. **Categorization**: Extracted requirements were categorized into functional and non-functional specifications to guide the development phases.
 
 ## 2. System Design and Architecture
 
-The application follows a modular front-end structure:
+The application follows a modular Client-Server architecture:
 
 - `HTML` was used to build separate pages for each main system function.
 - `CSS` was used to provide a consistent visual design, responsive layout, cards, forms, and dashboard styling.
 - `JavaScript` was split into reusable modules for storage, authentication, group management, task management, dashboard calculations, administrator features, and shared UI helpers.
+- `Flask (Python)` serves as the API layer, handling business logic, email notifications, and GitHub synchronization.
+- `SQLite` provides persistent storage for users, groups, tasks, and progress logs.
 
 This modular structure improves readability, maintainability, and future extensibility.
 
@@ -35,55 +42,49 @@ The main modules are:
 
 ### 3.1 User Management
 
-The system allows users to:
-- register and create an account
-- log in and log out
-- update their profile information
-- set a profile image through a URL or uploaded image preview
-
-The system also preserves the current session using browser storage.
+1.1 **Registration**: Users can register and create a personal account.
+1.2 **Profile Customization**: Users can upload or set a profile picture and link GitHub usernames.
+1.3 **Authentication**: Secure login and logout functionality, supported by a session management system.
 
 ### 3.2 Group Management
 
-The system allows:
-- a user to create a group
-- the group creator to automatically become the group leader
-- users to join a group using an invite code
-- the leader to manage member roles
-
-Roles inside a group are represented through a role map, which controls what members are allowed to do.
+2.1 **Group Creation**: Users can create groups, automatically becoming the Group Leader.
+2.2 **Joining**: Users join existing groups via unique invite codes.
+2.3 **Role Management**: Group Leaders can manage member roles (Leader, Editor, Member) and permissions.
 
 ### 3.3 Task Management
 
-The system supports:
-- creation of group tasks
-- assignment of tasks to specific members
-- editing and deletion of tasks by authorized users
-- task properties such as title, description, deadline, category, status, and task type
-- personal tasks that are separate from group tasks
-- status updates and progress notes
-- reminder-type tasks in addition to deadline-based tasks
+3.1 - 3.4 **CRUD Operations**: Authorized users can create, assign, modify, and delete tasks containing descriptions, categories, deadlines, and status.
+3.5 - 3.6 **Task Types**: Support for deadline-based tasks and read-only reminders with progress reporting.
+3.7 - 3.8 **Unified Feed**: Personal and group tasks are displayed in a unified main feed.
+3.9 **Complexity Sizing**: Group Leaders assign 'Complexity Sizes' (XS to XL) to tasks, mapped to predefined Line of Code (LoC) ranges.
+3.10 - 3.11 **GitHub Integration**: Tasks can be linked to GitHub branches. The system autonomously fetches commit data to update 'Actual LoC'.
 
 ### 3.4 Dashboard and Progress Monitoring
 
-Each group can be monitored through dashboard information that includes:
-- total number of tasks
-- pending tasks
-- ongoing tasks
-- completed tasks
-- completion percentage
-- simple visual progress indicators
-
-The main dashboard also summarizes assigned work, upcoming deadlines, and group activity.
+4.1 - 4.3 **Visualization**: Dashboards display metrics for completed, pending, and ongoing tasks.
+4.4 **LoC Progress**: Completion percentage is calculated by comparing actual LoC pushed to GitHub against the median value of the assigned size range.
+4.5 **Efficiency Alerts**: The system generates alerts if code output significantly exceeds the expected complexity range.
 
 ### 3.5 System Administration
 
-The administrator panel supports:
-- viewing all system users
-- activating and deactivating accounts
-- removing non-protected demo accounts
-- viewing total users, groups, tasks, and completion rate
-- exporting local application data as a JSON backup file
+5.1 **Account Management**: Administrators can activate, deactivate, or manage user accounts.
+5.2 **Performance Monitoring**: Oversight of system-wide metrics and task flow.
+5.3 **Backup**: Ability to perform data backup operations via JSON export.
+
+## 3.4 Non-Functional Requirements
+
+### 1. Performance
+1.1 **Responsiveness**: The system responds to user actions within 2 seconds.
+1.2 **Concurrency**: Supports multiple users without performance degradation.
+1.3 **Synchronization**: GitHub API integration synchronizes data every 5 minutes.
+
+### 2. Security
+2.1 - 2.3 **Access Control**: Role-based access ensures group data is accessible only to authorized members and protects user data.
+2.4 **Token Security**: (Planned) GitHub Personal Access Tokens will be stored using encryption.
+
+### 3. Reliability
+3.1 - 3.2 **Persistence**: Data is stored persistently in SQLite to prevent loss and ensure consistent behavior.
 
 ## 4. Non-Functional Considerations
 
@@ -125,23 +126,18 @@ In addition, JavaScript files were syntax-checked using Node module parsing.
 
 ## 6. Limitations
 
-The current implementation has the following limitations:
+The current implementation focuses on the core functional requirements for academic group projects. Current limitations include:
+- **Encryption**: Requirement 2.4 (GitHub Token Encryption) is planned for the next security iteration.
+- **Database Migrations**: Manual schema management is required via `init_db.py`.
+- **Analytics**: System performance monitoring uses high-level aggregated metrics rather than deep logging.
 
-- there is no real backend server
-- there is no database outside browser storage
-- passwords are stored in plain form for demonstration purposes only
-- system performance monitoring is simulated through local metrics
-- backup is limited to downloading JSON data from the browser
-
-These limitations are acceptable for a semester-project prototype and also leave room for future expansion.
 
 ## 7. Future Improvements
 
 Possible future enhancements include:
 
-- integrating a real backend and database
-- adding secure password hashing and authentication
-- replacing localStorage with API-based persistence
+- Implementing secure password hashing (e.g., Argon2 or bcrypt).
+- Transitioning from manual LoC entry to fully automated GitHub Webhooks.
 - adding notifications and real-time collaboration
 - expanding analytics and reporting
 - adding calendar views and richer charts

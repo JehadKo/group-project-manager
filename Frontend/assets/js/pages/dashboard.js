@@ -1,6 +1,6 @@
 import { bootstrapProtectedPage } from "../app.js";
 import { getCurrentUser } from "../auth.js";
-import { STORAGE_KEYS } from "../storage.js";
+import { STORAGE_KEYS, getComplexityTargets } from "../storage.js";
 import { getGroupProgress, getUserDashboardData } from "../dashboard.js";
 import { createEmptyState, createTaskCard, escapeHtml, formatDate, renderProgressMarkup, renderAppChrome } from "../ui.js";
 import { getTaskAssigneeName, getTaskAssigneeRole } from "../tasks.js";
@@ -419,246 +419,77 @@ if (user) {
           <div class="metric-card__value">${data.assignedCount}</div>
           ${getTrendMarkup(data.trends.assignedDiff, " active", true)}
           <div class="metric-card__hint">Assignments that still need progress from you</div>
-          <svg class="metric-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <svg class="metric-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
         </article>
-        <article class="metric-card metric-card--amber">
-          <div class="metric-card__label">${data.overdueCount > 0 ? "Deadline Risk" : "Near-Term Due"}</div>
-          <div class="metric-card__value">${data.overdueCount > 0 ? data.overdueCount : data.dueSoonCount}</div>
-          <div class="metric-card__trend">${data.overdueCount > 0 ? "Act now" : "Keep watch"}</div>
-          <div class="metric-card__hint">${data.overdueCount > 0 ? "Tasks already past deadline" : "Tasks due within the next 72 hours"}</div>
-          <svg class="metric-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 1.5"></path></svg>
-        </article>
-      `;
-    }
-
-    if (overviewChartContainer) {
-      const { pending, ongoing, completed, total, completionRate } = data.overview;
-      const isGoalReached = completionRate === 100 && total > 0;
-
-      overviewChartContainer.innerHTML = `
-        <div class="dashboard-panel-header">
-          <div>
-            <h2>Task distribution</h2>
-            <p class="muted small">See where the workload is stuck, moving, or already resolved.</p>
-          </div>
-          <div class="dashboard-kpi">
-            <div class="dashboard-kpi__value ${isGoalReached ? "is-celebrating" : ""}">${completionRate}%</div>
-            <div class="dashboard-kpi__label">Completion rate</div>
-          </div>
-        </div>
-        <div class="dashboard-bar-grid">
-          <div class="dashboard-bar-card chart-bar" data-tooltip="${total ? Math.round((pending / total) * 100) : 0}% of all tasks">
-            <div class="split small">
-              <span class="dashboard-bar-card__title dashboard-bar-card__title--warning">Pending tasks</span>
-              <strong>${pending}</strong>
-            </div>
-            <div class="chart-bar__track"><div class="chart-bar__fill chart-bar__fill--pending" style="width:${total ? (pending / total) * 100 : 0}%"></div></div>
-          </div>
-          <div class="dashboard-bar-card chart-bar" data-tooltip="${total ? Math.round((ongoing / total) * 100) : 0}% of all tasks">
-            <div class="split small">
-              <span class="dashboard-bar-card__title dashboard-bar-card__title--primary">Ongoing work</span>
-              <strong>${ongoing}</strong>
-            </div>
-            <div class="chart-bar__track"><div class="chart-bar__fill chart-bar__fill--ongoing" style="width:${total ? (ongoing / total) * 100 : 0}%"></div></div>
-          </div>
-          <div class="dashboard-bar-card chart-bar" data-tooltip="${completionRate}% of all tasks">
-            <div class="split small">
-              <span class="dashboard-bar-card__title dashboard-bar-card__title--success">Completed items</span>
-              <strong>${completed}</strong>
-            </div>
-            <div class="chart-bar__track"><div class="chart-bar__fill chart-bar__fill--completed" style="width:${total ? (completed / total) * 100 : 0}%"></div></div>
-          </div>
-        </div>
-        ${
-          isGoalReached
-            ? `
-              <div class="goal-banner">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="vertical-align: middle; margin-right: 4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                All visible goals are complete. Excellent work.
-              </div>
-            `
-            : ""
-        }
-      `;
-    }
-
-    if (weeklyChartContainer && data.weeklyActivity) {
-      const counts = data.weeklyActivity.map((day) => day.count);
-      const maxCount = Math.max(...counts, 1);
-      const points = data.weeklyActivity
-        .map((day, index) => {
-          const x = (index / 6) * 100;
-          const y = 100 - (day.count / maxCount) * 100;
-          return `${x},${y}`;
-        })
-        .join(" ");
-
-      weeklyChartContainer.innerHTML = `
-        <div class="dashboard-panel-header">
-          <div>
-            <h2>Weekly momentum</h2>
-            <p class="muted small">Completed tasks over the last seven days.</p>
-          </div>
-        </div>
-        <div class="dashboard-weekly-chart">
-          <svg viewBox="0 -5 100 110" preserveAspectRatio="none" style="width: 100%; height: 100%; overflow: visible; display: block;">
-            <defs>
-              <linearGradient id="line-grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="var(--primary)" stop-opacity="0.25"></stop>
-                <stop offset="100%" stop-color="var(--primary)" stop-opacity="0"></stop>
-              </linearGradient>
-            </defs>
-            <polyline points="${points}" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
-            <path d="M 0,100 L ${points} L 100,100 Z" fill="url(#line-grad)"></path>
-            ${data.weeklyActivity
-              .map((day, index) => {
-                const x = (index / 6) * 100;
-                const y = 100 - (day.count / maxCount) * 100;
-                return `<circle cx="${x}" cy="${y}" r="2.5" fill="#fff" stroke="var(--primary)" stroke-width="1.5" data-tooltip="${day.count} tasks completed on ${day.label}" style="cursor: pointer;"></circle>`;
-              })
-              .join("")}
-          </svg>
-          <div class="dashboard-weekly-axis">
-            ${data.weeklyActivity
-              .map(
-                (day) =>
-                  `<span class="muted" style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">${day.label}</span>`
-              )
-              .join("")}
-          </div>
-        </div>
-      `;
-    }
-
-    if (typeChartContainer && data.typeBreakdown) {
-      const { deadlines, reminders } = data.typeBreakdown;
-      const total = deadlines + reminders;
-      const deadlinePercent = total ? Math.round((deadlines / total) * 100) : 0;
-      const reminderPercent = total ? 100 - deadlinePercent : 0;
-      const strokeDash = `${deadlinePercent} 100`;
-
-      typeChartContainer.innerHTML = `
-        <div class="dashboard-panel-header">
-          <div>
-            <h2>Task composition</h2>
-            <p class="muted small">How much of the workload is delivery versus coordination.</p>
-          </div>
-        </div>
-        <div class="dashboard-composition">
-          <div class="dashboard-composition__ring">
-            <svg viewBox="0 0 42 42" style="transform: rotate(-90deg); width: 100%; height: 100%;">
-              <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="var(--warning)" stroke-width="6" data-tooltip="Reminders: ${reminderPercent}%" style="opacity: 0.2;"></circle>
-              <circle class="donut-segment--animate" cx="21" cy="21" r="15.9155" fill="transparent" stroke="var(--primary)" stroke-width="6" stroke-dasharray="${strokeDash}" stroke-dashoffset="0" stroke-linecap="round" data-tooltip="Deadlines: ${deadlinePercent}%" style="transition: stroke-dasharray 1s ease;"></circle>
-            </svg>
-            <div class="dashboard-composition__total donut-total--animate">${total}</div>
-          </div>
-          <div class="dashboard-composition__legend">
-            <div class="dashboard-composition__row small">
-              <div class="dashboard-composition__label">
-                <div class="dashboard-composition__swatch" style="background: var(--primary);"></div>
-                <span style="font-weight: 700;">Deadlines</span>
-              </div>
-              <strong>${deadlines}</strong>
-            </div>
-            <div class="dashboard-composition__row small">
-              <div class="dashboard-composition__label">
-                <div class="dashboard-composition__swatch" style="background: var(--warning);"></div>
-                <span style="font-weight: 700;">Reminders</span>
-              </div>
-              <strong>${reminders}</strong>
-            </div>
-            <div class="dashboard-composition__note">
-              <p class="muted" style="font-size: 0.65rem; line-height: 1.4;">
-                ${deadlinePercent > 70 ? "Heavy focus on deliverables. Make sure workload and ownership are realistic." : "This looks like a balanced mix of planning and actual delivery work."}
-              </p>
-            </div>
-          </div>
-        </div>
       `;
     }
 
     if (upcomingContainer) {
-      upcomingContainer.innerHTML = data.upcomingTasks.length
-        ? data.upcomingTasks
-            .map((task) =>
-              createTaskCard(task, {
-                assigneeName: getTaskAssigneeName(task),
-                assigneeRole: getTaskAssigneeRole(task),
-              })
-            )
-            .join("")
-        : createEmptyState("No upcoming tasks", "Create a task or join a group to see deadlines here.");
+      if (data.upcomingTasks.length === 0) {
+        upcomingContainer.innerHTML = createEmptyState("No upcoming deadlines", "Your schedule is clear for the next week.");
+      } else {
+        upcomingContainer.innerHTML = data.upcomingTasks
+          .slice(0, 5)
+          .map((task) => createTaskCard(task))
+          .join("");
+      }
     }
 
     if (groupContainer) {
-      groupContainer.innerHTML = data.groups.length
-        ? data.groups
-            .map((group) => {
-              const progress = getGroupProgress(group.id);
-              if (!progress) {
-                return "";
-              }
+      const groups = getGroups();
+      if (groups.length === 0) {
+        groupContainer.innerHTML = createEmptyState("Not in any groups", "Join or create a group to start collaborating.");
+      } else {
+        groupContainer.innerHTML = groups
+          .map((group) => {
+            const progress = getGroupProgress(group.id);
+            
+            // Use complexity weights to simulate LoC progress for Group Leaders
+            let locMarkup = '';
+            if (group.leaderId === currentUser.id) {
+              const complexityMap = getComplexityTargets();
+              let estimatedLoC = 0;
+              let actualLoC = 0;
 
-              const members = progress.memberMap
-                .map((member) => {
-                  const roleLabel = member.role.charAt(0).toUpperCase() + member.role.slice(1);
+              progress.tasks.forEach(t => {
+                const weight = complexityMap[t.complexitySize] ?? 500;
+                estimatedLoC += weight;
+                if (typeof t.actualLoC === 'number') {
+                  actualLoC += t.actualLoC;
+                } else {
+                  if (t.status === "Completed") actualLoC += weight;
+                  else if (t.status === "Ongoing") actualLoC += weight * 0.4;
+                }
+              });
 
-                  return `
-                    <div class="dashboard-member">
-                      <div>
-                        <div class="dashboard-member__name">${escapeHtml(member.name)}</div>
-                        <div class="dashboard-member__role">${escapeHtml(roleLabel)}</div>
-                      </div>
-                      <div class="dashboard-member__score">${member.tasksCompleted}/${member.tasksAssigned} completed</div>
-                    </div>
-                  `;
-                })
-                .join("");
+              const locPercent = estimatedLoC > 0 ? Math.round((actualLoC / estimatedLoC) * 100) : 0;
+              const isOverBudget = actualLoC > (estimatedLoC * 1.1);
+              const colorStyle = isOverBudget ? 'color:var(--red);' : '';
+              
+              locMarkup = `
+                <div style="margin-top:0.4rem;">
+                  <span class="muted small" style="font-weight:700; text-transform:uppercase; letter-spacing:0.02em; ${colorStyle}">LoC Progress: ${Math.round(actualLoC)} / ${estimatedLoC} (${locPercent}%)</span>
+                </div>`;
+            }
 
-              return `
-                <article class="dashboard-card dashboard-group-card">
-                  <div class="dashboard-group-card__header">
-                    <div>
-                      <h2>${escapeHtml(group.groupName)}</h2>
-                      <p class="dashboard-group-card__invite">Invite code: ${escapeHtml(group.inviteCode)}</p>
-                    </div>
-                    <div class="dashboard-group-card__progress">${renderProgressMarkup(progress.summary.completionRate)}</div>
-                  </div>
-                  <div class="chart" style="margin-top: 1rem;">
-                    <div class="chart-bar" data-tooltip="${progress.summary.total ? Math.round((progress.summary.pending / progress.summary.total) * 100) : 0}% of group tasks">
-                      <div class="split small"><span>Pending</span><span>${progress.summary.pending}</span></div>
-                      <div class="chart-bar__track"><div class="chart-bar__fill chart-bar__fill--pending" style="width:${progress.summary.total ? (progress.summary.pending / progress.summary.total) * 100 : 0}%"></div></div>
-                    </div>
-                    <div class="chart-bar" data-tooltip="${progress.summary.total ? Math.round((progress.summary.ongoing / progress.summary.total) * 100) : 0}% of group tasks">
-                      <div class="split small"><span>Ongoing</span><span>${progress.summary.ongoing}</span></div>
-                      <div class="chart-bar__track"><div class="chart-bar__fill chart-bar__fill--ongoing" style="width:${progress.summary.total ? (progress.summary.ongoing / progress.summary.total) * 100 : 0}%"></div></div>
-                    </div>
-                    <div class="chart-bar" data-tooltip="${progress.summary.completionRate}% of group tasks">
-                      <div class="split small"><span>Completed</span><span>${progress.summary.completed}</span></div>
-                      <div class="chart-bar__track"><div class="chart-bar__fill chart-bar__fill--completed" style="width:${progress.summary.total ? (progress.summary.completed / progress.summary.total) * 100 : 0}%"></div></div>
-                    </div>
-                  </div>
-                  <div class="dashboard-member-list">
-                    ${members}
-                  </div>
-                </article>
-              `;
-            })
-            .join("")
-        : createEmptyState("No groups yet", "Create a group or join one with an invite code to start tracking project progress.");
+            return `
+              <div class="group-progress-item">
+                <div class="group-progress-item__header">
+                  <strong>${escapeHtml(group.name)}</strong>
+                  <span>${progress.percent}%</span>
+                </div>
+                ${renderProgressMarkup(progress.percent)}
+                <div class="group-progress-item__meta">
+                  ${pluralize(progress.total, "task")}, ${progress.completed} done
+                </div>
+              </div>
+              ${locMarkup}
+            `;
+          })
+          .join("");
+      }
     }
   }
 
   renderDashboard(user);
-
-  window.addEventListener("storage", (event) => {
-    if (Object.values(STORAGE_KEYS).includes(event.key)) {
-      const freshUser = getCurrentUser();
-      if (freshUser) {
-        user = freshUser;
-        renderAppChrome("dashboard", user);
-        renderDashboard(user);
-      }
-    }
-  });
 }

@@ -1,5 +1,6 @@
 import { consumeFlash, getCurrentUser, isAdmin, logoutUser } from "./auth.js";
 import { getUserGroups } from "./groups.js";
+import { getComplexityTargets } from "./storage.js";
 
 const APP_LINKS = [
   { href: "dashboard.html", label: "Dashboard", key: "dashboard", section: "Overview", icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>` },
@@ -238,6 +239,7 @@ function createTaskCard(task, options = {}) {
   const {
     assigneeName = "Unassigned",
     assigneeRole = "",
+    assigneeAvatar = "",
     groupName = "",
     showGroupName = false,
     actions = "",
@@ -260,10 +262,23 @@ function createTaskCard(task, options = {}) {
       : "tag--medium";
 
   const commentCount = task.comments?.length || 0;
+  const statusClass = `s-${task.status.toLowerCase()}`;
+
+  // LoC Progress Calculation (Requirement 4.4)
+  const complexityMap = getComplexityTargets();
+  const targetLoC = complexityMap[task.complexitySize] || 500;
+  const currentLoC = typeof task.actualLoC === "number"
+    ? task.actualLoC
+    : (task.status === "Completed" ? targetLoC : (task.status === "Ongoing" ? targetLoC * 0.4 : 0));
+
+  const locPercent = Math.round((currentLoC / targetLoC) * 100);
 
   return `
-    <article class="task-card">
-      <div class="task-card__top">
+    <article class="task-card ${statusClass}">
+      <div class="task-card__print-avatar">${assigneeAvatar}</div>
+      <div style="flex: 1; min-width: 0;">
+        <div class="task-card__top" style="position: relative; padding-left: 2.2rem;">
+        <input type="checkbox" class="task-selector" data-task-id="${task.id}" style="position: absolute; left: 0; top: 0.15rem; width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent);">
         <div>
           <div class="inline-actions">
             <span class="status-pill" data-status="${escapeHtml(task.status)}">${escapeHtml(task.status)}</span>
@@ -281,6 +296,14 @@ function createTaskCard(task, options = {}) {
         </div>
         <div class="small muted">${escapeHtml(formatDate(task.deadline))}</div>
       </div>
+      <div class="task-typing-status is-hidden" id="task-typing-status-${task.id}"></div>
+      <div class="task-card__loc-progress" style="margin-top: 1rem; margin-bottom: 0.5rem;">
+        <div style="display:flex; justify-content:space-between; margin-bottom: 0.35rem; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-soft);">
+          <span>LoC Progress</span>
+          <span>${locPercent}%</span>
+        </div>
+        ${renderProgressMarkup(Math.min(locPercent, 100))}
+      </div>
       <p>${escapeHtml(task.description)}</p>
       <div class="task-meta">
         <div><strong>Assigned to:</strong> ${
@@ -296,6 +319,7 @@ function createTaskCard(task, options = {}) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Discussion
         </button>
+        </div>
       </div>
     </article>
   `;
@@ -331,5 +355,4 @@ export {
   renderFlash,
   renderProgressMarkup,
   renderPublicHeader,
-  showToast,
-};
+  showToast

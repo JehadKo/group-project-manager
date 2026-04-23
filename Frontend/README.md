@@ -13,7 +13,7 @@ This prototype helps students organize group work more clearly by supporting:
 ## Project Overview
 
 The system is designed around the semester-project requirement of improving coordination, accountability, and visibility in student group projects.
-It uses browser `localStorage` instead of a backend so the whole system can be demonstrated quickly in a classroom or lab environment.
+The application leverages a Flask backend and SQLite database to ensure data persistence, secure authentication flows, and real-time coordination features.
 
 ## Main Features
 
@@ -46,9 +46,9 @@ It uses browser `localStorage` instead of a backend so the whole system can be d
 - `HTML5`
 - `CSS3`
 - `JavaScript (ES Modules)`
-- Browser `localStorage`
+- `Flask (Python)`
+- `SQLite`
 
-No backend framework or database is required for this version.
 
 ## Pages Included
 
@@ -150,14 +150,9 @@ These accounts are automatically seeded in `localStorage` on first load:
 
 ## Data Storage
 
-The app stores data in browser `localStorage` using these keys:
-
-- `sgpm_users`
-- `sgpm_groups`
-- `sgpm_tasks`
-- `sgpm_progress_logs`
-- `sgpm_session`
-- `sgpm_seeded`
+The system uses a hybrid storage approach:
+- **Server-side**: Persistent data (Users, Groups, Tasks, Logs) is stored in a `SQLite` database (`taskly.db`).
+- **Client-side**: The frontend uses `localStorage` as a fast cache for the application state and `sessionStorage` for temporary authentication tokens.
 
 ## Functional Coverage
 
@@ -171,13 +166,9 @@ The implementation covers the planned front-end behaviors for:
 
 ## Limitations
 
-This version is intentionally a front-end prototype, so:
-
-- passwords are stored as plain values in browser storage
-- there is no real backend authentication
-- there is no server database
-- system monitoring is simulated through local metrics
-- backup is implemented as JSON export of local demo data
+Current system limitations include:
+- **Encryption**: At-rest encryption for sensitive data like GitHub tokens is a planned security enhancement (Requirement 2.4).
+- **Database Management**: Schema updates currently require manual intervention via initialization scripts.
 
 ## Notes For Submission
 

@@ -75,8 +75,46 @@
     .topbar-btn { height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;gap:0.4rem;padding:0 0.75rem;cursor:pointer;font-family:var(--font-body);font-size:0.78rem;font-weight:500;color:var(--muted);transition:all var(--trans); }
     .topbar-btn svg { width:14px;height:14px;stroke:var(--muted); }
     .topbar-btn:hover { background:var(--cream);border-color:var(--border-strong);color:var(--ink);transform:translateY(-1px); }
+    .topbar-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .topbar-btn:hover svg { stroke:var(--ink); }
     .topbar-btn.danger:hover { background:var(--red-light);border-color:var(--red);color:var(--red); }
+
+    /* MODAL */
+    .modal-overlay { position:fixed;inset:0;background:rgba(13,13,13,0.5);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;opacity:0;transition:opacity var(--trans); }
+    .modal-overlay.open { display:flex; opacity:1; }
+    .modal { background:var(--surface);border-radius:var(--radius);padding:2rem;max-width:400px;width:calc(100% - 2rem);box-shadow:var(--shadow-lg);transform:translateY(18px);transition:transform var(--trans); }
+    .modal-overlay.open .modal { transform:translateY(0); }
+    .modal-title { font-family:var(--font-display);font-size:1.5rem;margin-bottom:0.5rem;color:var(--ink); }
+    .modal-sub { font-size:0.85rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.6; }
+
+    /* Specific styles for select elements in the topbar */
+    select.topbar-btn {
+      -webkit-appearance: none; /* Remove default arrow on Chrome/Safari */
+      -moz-appearance: none;    /* Remove default arrow on Firefox */
+      appearance: none;         /* Remove default arrow */
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a7468' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); /* Custom arrow */
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      padding: 0 2.25rem 0 0.85rem; /* Precise padding to balance the custom arrow */
+      width: auto; /* Allow width to adjust to content */
+      min-width: 145px;
+      outline: none; /* Remove outline on focus */
+      cursor: pointer;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 32px; /* Ensures text is perfectly centered vertically within the 34px button height */
+      transition: all var(--trans);
+    }
+    select.topbar-btn:hover {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230d0d0d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); /* Custom arrow on hover */
+      border-color: var(--border-strong);
+      color: var(--ink);
+    }
+    select.topbar-btn:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow); /* Similar to input focus */
+      transform: translateY(-1px);
+    }
     .topbar-btn.hidden { display:none; }
     .topbar-date { font-size:0.78rem;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:0.3rem 0.75rem;border-radius:99px; }
     .search-wrap { display:flex;align-items:center;gap:0.4rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0 0.75rem;height:34px;transition:border-color var(--trans),box-shadow var(--trans); }
@@ -194,6 +232,13 @@
     .task-card.s-pending::before   { background:var(--amber); }
     .task-card.s-ongoing::before   { background:var(--blue); }
     .task-card.s-completed::before { background:var(--green); }
+    @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.6);} }
+    .task-typing-status { font-size:0.7rem;color:var(--blue);font-weight:600;margin-top:0.5rem;display:flex;align-items:center;gap:0.3rem; }
+    .task-typing-status::before { content:'';width:6px;height:6px;border-radius:50%;background:var(--blue);animation:pulseDot 1.5s infinite ease-in-out; }
+    .task-typing-status.is-hidden { display:none; }
+    .task-card.s-pending { background: linear-gradient(to right, rgba(180, 83, 9, 0.04), var(--surface)); }
+    .task-card.s-ongoing { background: linear-gradient(to right, rgba(37, 99, 186, 0.04), var(--surface)); }
+    .task-card.s-completed { background: linear-gradient(to right, rgba(26, 122, 74, 0.04), var(--surface)); }
     .task-card:hover { transform:translateY(-2px) translateX(2px);box-shadow:var(--shadow-md);border-color:var(--border-strong); }
     .task-card:hover::before { width:5px; }
     .task-card-top { display:flex;align-items:flex-start;justify-content:space-between;gap:0.6rem; }
@@ -201,7 +246,16 @@
     .task-title { font-size:0.88rem;font-weight:600;line-height:1.3;margin-bottom:0.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
     .task-card.s-completed .task-title { text-decoration:line-through;opacity:0.55; }
     .task-meta { display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem; }
-    .task-cat { font-size:0.66rem;font-weight:600;padding:0.12rem 0.45rem;border-radius:99px;background:var(--paper);border:1px solid var(--border);color:var(--muted);letter-spacing:0.03em; }
+    .task-cat, .tag { 
+      font-size:0.66rem;font-weight:600;padding:0.12rem 0.45rem;border-radius:99px;
+      background:var(--paper);border:1px solid var(--border);color:var(--muted);
+      letter-spacing:0.03em; transition: all var(--trans); cursor: default;
+    }
+    .task-cat:hover, .tag:hover {
+      transform: translateY(-1.5px);
+      border-color: var(--accent);
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
     .task-due { font-size:0.7rem;color:var(--muted);display:flex;align-items:center;gap:0.25rem; }
     .task-due svg { width:11px;height:11px; }
     .task-due.overdue { color:var(--red);font-weight:600; }
@@ -281,6 +335,43 @@
     @keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
     @keyframes fadeUp { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
 
+    @media print {
+      .sidebar, .topbar, .form-panel, .btn-submit, .task-actions, .cursor, .cursor-ring, #flash-container, .topbar-btn { display: none !important; }
+      .main-content { margin-left: 0 !important; margin-top: 0 !important; padding: 0 !important; }
+      .main-grid { display: block !important; }
+      .task-card { 
+        display: flex !important; 
+        gap: 1.5rem; 
+        break-inside: avoid; 
+        border: 1px solid #eee !important; 
+        margin-bottom: 1.5rem; 
+        padding: 1.5rem !important;
+      }
+      body { background: white !important; }
+      .task-card__print-avatar { display: block !important; width: 48px !important; height: 48px !important; flex-shrink: 0; }
+      .task-card__print-avatar .avatar, .task-card__print-avatar img { width: 100% !important; height: 100% !important; border-radius: 8px !important; }
+      .report-summary-print {
+        display: block !important;
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid var(--ink);
+      }
+      .report-stats { display: flex; gap: 3rem; margin-top: 1.25rem; }
+      .report-stats div { display: flex; flex-direction: column; gap: 0.25rem; }
+      .report-stats span { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; }
+      .report-stats strong { font-size: 1.75rem; font-family: var(--font-display); color: var(--ink); line-height: 1; }
+
+      .report-distribution { margin-top: 2.5rem; }
+      .report-distribution table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
+      .report-distribution th, .report-distribution td { text-align: left; padding: 0.75rem 0.5rem; border-bottom: 1px solid #eee; font-size: 0.8rem; }
+      .report-distribution th { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; border-bottom: 2px solid var(--ink); }
+    }
+
+    .task-card__print-avatar { display: none; }
+    .report-summary-print { display: none; }
+    .report-summary-print h2 { font-family: var(--font-display); font-size: 2.2rem; margin-bottom: 0.4rem; }
+    .report-summary-print p { font-size: 0.85rem; color: var(--muted); }
+
     @media (max-width:900px) {
       .sidebar{transform:translateX(-100%);} .main-content{margin-left:0;} .topbar{left:0;}
       .main-grid{grid-template-columns:1fr;} .form-panel{position:static;}
@@ -323,14 +414,44 @@
 <header class="topbar">
   <div class="topbar-left"><span>Taskly</span><span class="topbar-sep">/</span><span>Tasks</span></div>
   <div class="topbar-right">
+    <button id="download-report-btn" class="topbar-btn hidden" style="gap:0.4rem;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Download Report
+    </button>
+    <div class="topbar-btn hidden" id="complexity-settings-btn" style="gap:0.4rem;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      LoC Targets
+    </div>
     <div class="search-wrap">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input type="text" id="task-search" placeholder="Search tasks…"/>
     </div>
-    <div class="topbar-btn" id="sort-btn" style="gap:0.4rem;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-      Sort: Deadline
+    <select id="task-category-filter" class="topbar-btn">
+      <option value="all">All Categories</option>
+    </select>
+    <select id="task-priority-filter" class="topbar-btn">
+      <option value="all">All Priorities</option>
+      <option value="High">High</option>
+      <option value="Medium">Medium</option>
+      <option value="Low">Low</option>
+    </select>
+    <div class="search-wrap" style="width: auto; padding: 0 0.5rem; gap: 0.3rem;">
+      <span class="muted" style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">From</span>
+      <input type="date" id="filter-start-date" style="width: 105px; font-size: 0.75rem; border: none; background: transparent; outline: none; color: var(--ink);">
     </div>
+    <div class="search-wrap" style="width: auto; padding: 0 0.5rem; gap: 0.3rem;">
+      <span class="muted" style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">To</span>
+      <input type="date" id="filter-end-date" style="width: 105px; font-size: 0.75rem; border: none; background: transparent; outline: none; color: var(--ink);">
+    </div>
+    <select id="task-sort" class="topbar-btn">
+      <option value="deadline">Sort: Deadline</option>
+      <option value="priority">Sort: Priority</option>
+      <option value="status">Sort: Status</option>
+    </select>
+    <button id="clear-filters-btn" class="topbar-btn" title="Clear all filters">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      Clear
+    </button>
     <div class="topbar-btn danger hidden" id="cancel-edit-btn" onclick="cancelEdit()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       Cancel edit
@@ -367,9 +488,57 @@
 
   <div id="flash-container"></div>
 
+  <!-- BULK ACTIONS BAR -->
+  <div id="bulk-actions-bar" class="panel is-hidden" style="position: sticky; top: 60px; z-index: 80; margin-bottom: 1.25rem; background: var(--ink); color: white; display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; border-radius: var(--radius-sm); border: none; box-shadow: var(--shadow-lg);">
+    <div style="font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+      <span id="selected-count" style="display: grid; place-items: center; min-width: 20px; height: 20px; background: var(--accent); color: white; border-radius: 50%; font-size: 0.7rem;">0</span>
+      selected
+    </div>
+    <div class="topbar-sep" style="opacity: 0.2; width: 1px; height: 20px; background: white;"></div>
+    <select id="bulk-status" class="topbar-btn" style="background: rgba(255,255,255,0.08); color: white; border-color: rgba(255,255,255,0.15); min-width: 140px;">
+      <option value="" style="color: var(--ink)">Update Status...</option>
+      <option value="Pending" style="color: var(--ink)">Pending</option>
+      <option value="Ongoing" style="color: var(--ink)">Ongoing</option>
+      <option value="Completed" style="color: var(--ink)">Completed</option>
+    </select>
+    <input type="text" id="bulk-category" class="topbar-btn" placeholder="New category..." style="background: rgba(255,255,255,0.08); color: white; border-color: rgba(255,255,255,0.15); width: 150px; text-align: left;">
+    <button id="apply-bulk" class="btn" style="min-height: 34px; padding: 0 1.25rem; font-size: 0.78rem; background: var(--accent); border-radius: 8px;">Apply Changes</button>
+    <button id="bulk-delete" class="btn" style="min-height: 34px; padding: 0 1.25rem; font-size: 0.78rem; background: var(--red); border-radius: 8px; color: white;">Delete Selected</button>
+    <button id="clear-selection" style="background: none; border: none; color: rgba(255,255,255,0.5); font-size: 0.78rem; font-weight: 600; cursor: pointer;">Cancel</button>
+  </div>
+
   <!-- SECTION HEADER -->
   <div class="section-head" style="opacity:0;animation:fadeUp 0.45s 0.15s forwards">
     <div><div class="section-eyebrow">Work</div><div class="section-title">All your tasks</div></div>
+  </div>
+
+  <!-- PRINT ONLY SUMMARY -->
+  <div id="report-summary" class="report-summary-print">
+    <h2>Project Health Report</h2>
+    <p id="report-date-range">Generating status for current workspace...</p>
+    <div class="report-stats">
+      <div><span>Tasks Tracked</span><strong id="print-stat-total">0</strong></div>
+      <div><span>Completion</span><strong id="print-stat-rate">0%</strong></div>
+      <div><span>Ongoing</span><strong id="print-stat-ongoing">0</strong></div>
+      <div><span>Overdue</span><strong id="print-stat-overdue">0</strong></div>
+    </div>
+    <div style="margin-top: 2rem;">
+      <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em;">Top Contributors</span>
+      <div id="print-top-contributors" style="display: flex; gap: 2rem; margin-top: 0.75rem;"></div>
+    </div>
+    <div class="report-distribution">
+      <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em;">Task Distribution by Category</span>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 50%;">Category</th>
+            <th style="width: 25%;">Total Tasks</th>
+            <th style="width: 25%;">% of Workspace</th>
+          </tr>
+        </thead>
+        <tbody id="print-distribution-body"></tbody>
+      </table>
+    </div>
   </div>
 
   <div class="main-grid">
@@ -403,14 +572,14 @@
         <div class="field-row">
           <div class="field">
             <label for="taskType">Type</label>
-            <select id="taskType">
+            <select id="taskType" name="taskType">
               <option value="deadline">Deadline task</option>
               <option value="reminder">Reminder</option>
             </select>
           </div>
           <div class="field">
             <label for="status">Status</label>
-            <select id="status">
+            <select id="status" name="status">
               <option value="Pending">Pending</option>
               <option value="Ongoing">Ongoing</option>
               <option value="Completed">Completed</option>
@@ -420,17 +589,17 @@
 
         <div class="field">
           <label for="title">Title</label>
-          <input id="title" required placeholder="What needs to be done?"/>
+          <input id="title" name="title" required placeholder="What needs to be done?"/>
         </div>
 
         <div class="field-row">
           <div class="field">
             <label for="category">Category</label>
-            <input id="category" placeholder="UI, Backend…" required/>
+            <input id="category" name="category" placeholder="UI, Backend…" required/>
           </div>
           <div class="field">
             <label for="priority">Priority</label>
-            <select id="priority">
+            <select id="priority" name="priority">
               <option value="High">High</option>
               <option value="Medium" selected>Medium</option>
               <option value="Low">Low</option>
@@ -438,39 +607,50 @@
           </div>
         </div>
 
+        <div class="field-row">
+          <div class="field">
+            <label for="complexitySize">Complexity Size</label>
+            <select id="complexitySize" name="complexitySize">
+              <option value="XS">XS (~100 LoC)</option>
+              <option value="S">S (~250 LoC)</option>
+              <option value="M" selected>M (~500 LoC)</option>
+              <option value="L">L (~1000 LoC)</option>
+              <option value="XL">XL (~2000 LoC)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="githubBranch">GitHub Branch</label>
+            <input id="githubBranch" name="githubBranch" placeholder="e.g. main"/>
+          </div>
+        </div>
+
         <div class="field">
           <label for="deadline">Deadline</label>
-          <input id="deadline" type="date"/>
+          <input id="deadline" name="deadline" type="date"/>
         </div>
 
         <div class="field">
           <label for="description">Description</label>
-          <textarea id="description" required placeholder="Describe the task…"></textarea>
+          <textarea id="description" name="description" required placeholder="Describe the task…"></textarea>
         </div>
 
         <div class="field" id="group-field" style="display:none">
           <label for="groupId">Group</label>
-          <select id="groupId">
+          <select id="groupId" name="groupId">
             <option value="">— select group —</option>
-            <option>Frontend Team</option>
-            <option>Backend Squad</option>
-            <option>Design Circle</option>
           </select>
         </div>
 
         <div class="field" id="assign-field" style="display:none">
           <label for="assignedTo">Assign to</label>
-          <select id="assignedTo">
+          <select id="assignedTo" name="assignedTo">
             <option value="">— select member —</option>
-            <option>Ahmed L.</option>
-            <option>Sara M.</option>
-            <option>Khalid R.</option>
           </select>
         </div>
 
         <div class="field">
           <label for="progressNote">Progress note <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted-2)">(optional)</span></label>
-          <textarea id="progressNote" placeholder="Optional starting note or update…"></textarea>
+          <textarea id="progressNote" name="progressNote" placeholder="Optional starting note or update…"></textarea>
         </div>
 
         <button type="submit" class="btn-submit" id="save-btn">
@@ -697,6 +877,7 @@
             <div class="task-actions">
               <button class="action-btn-sm" onclick="editTask(this)">Edit</button>
               <button class="action-btn-sm discuss" onclick="openDrawer(this)">Discussion</button>
+              <button class="action-btn-sm" onclick="syncGithub(this)">Sync GitHub</button>
               <button class="action-btn-sm del" onclick="deleteTask(this)">Delete</button>
             </div>
           </div>
@@ -755,6 +936,44 @@
   </div>
 </aside>
 
+<!-- COMPLEXITY SETTINGS MODAL -->
+<div class="drawer-overlay" id="settings-overlay"></div>
+<aside class="drawer" id="settings-drawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-eyebrow">Project Administration</div>
+      <div class="drawer-title">LoC Targets</div>
+    </div>
+    <button class="drawer-close" id="close-settings">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <form id="complexity-targets-form" class="drawer-body" style="background:var(--surface);">
+    <p class="muted small" style="margin-bottom:0.5rem;">Define the median Lines of Code (LoC) expected for each task complexity size.</p>
+    <div class="field"><label>Extra Small (XS)</label><input type="number" name="XS" required min="1"/></div>
+    <div class="field"><label>Small (S)</label><input type="number" name="S" required min="1"/></div>
+    <div class="field"><label>Medium (M)</label><input type="number" name="M" required min="1"/></div>
+    <div class="field"><label>Large (L)</label><input type="number" name="L" required min="1"/></div>
+    <div class="field"><label>Extra Large (XL)</label><input type="number" name="XL" required min="1"/></div>
+    <button type="submit" class="btn-submit" style="margin-top:1rem;">
+      Save New Targets
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </button>
+  </form>
+</aside>
+
+<!-- BULK DELETE CONFIRMATION MODAL -->
+<div class="modal-overlay" id="bulk-delete-modal">
+  <div class="modal">
+    <h3 class="modal-title">Delete Tasks?</h3>
+    <p class="modal-sub">Are you sure you want to delete the selected tasks? This action is permanent and cannot be undone.</p>
+    <div class="form-actions" style="justify-content: flex-end; gap: 0.75rem;">
+      <button class="btn action-btn-sm" id="cancel-bulk-delete" style="min-height: 38px;">Keep them</button>
+      <button class="btn-danger" id="confirm-bulk-delete" style="min-height: 38px; padding: 0 1.5rem; border-radius: 99px; font-weight: 600;">Delete Forever</button>
+    </div>
+  </div>
+</div>
+
 <script>
   /* cursor */
   const cur=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
@@ -762,7 +981,7 @@
   document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';});
   (function loop(){rx+=(mx-rx)*0.13;ry+=(my-ry)*0.13;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
   function addHover(el){el.addEventListener('mouseenter',()=>{cur.style.width='16px';cur.style.height='16px';ring.style.width='44px';ring.style.height='44px';ring.style.opacity='.2';});el.addEventListener('mouseleave',()=>{cur.style.width='10px';cur.style.height='10px';ring.style.width='30px';ring.style.height='30px';ring.style.opacity='.4';});}
-  document.querySelectorAll('a,button,input,select,textarea,.task-card,.nav-item').forEach(addHover);
+  document.querySelectorAll('a,button,input,select,textarea,.task-card,.nav-item,.task-cat,.tag').forEach(addHover);
 
   document.getElementById('topbar-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
 
@@ -831,16 +1050,18 @@
     flash('Task removed.','success');
   }
 
-  /* save */
-  document.getElementById('task-form').addEventListener('submit',e=>{
-    e.preventDefault();
-    const btn=document.getElementById('save-btn');
-    const orig=btn.innerHTML;
-    btn.classList.add('success');
-    btn.innerHTML='✓ Saved!';
-    setTimeout(()=>{btn.classList.remove('success');btn.innerHTML=orig;cancelEdit();},2000);
-    flash(editTarget?'Task updated successfully!':'Task created successfully!','success');
-  });
+  /* sync github */
+  function syncGithub(btn){
+    const orig = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Syncing...';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = orig;
+      flash('GitHub sync complete. Actual LoC updated.', 'success');
+    }, 1500);
+  }
+
 
   /* flash */
   function flash(msg,type='success'){

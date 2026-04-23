@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
   progressLogs: "sgpm_progress_logs",
   session: "sgpm_session",
   seeded: "sgpm_seeded",
+  complexityTargets: "sgpm_complexity_targets",
 };
 
 function readJson(key, fallback) {
@@ -59,6 +60,14 @@ function saveTasks(tasks) {
 
 function getProgressLogs() {
   return readJson(STORAGE_KEYS.progressLogs, []);
+}
+
+function getComplexityTargets() {
+  return readJson(STORAGE_KEYS.complexityTargets, { XS: 100, S: 250, M: 500, L: 1000, XL: 2000 });
+}
+
+function saveComplexityTargets(targets) {
+  return writeJson(STORAGE_KEYS.complexityTargets, targets);
 }
 
 function saveProgressLogs(logs) {
@@ -164,6 +173,7 @@ export {
   generateInviteCode,
   getGroups,
   getProgressLogs,
+  getComplexityTargets,
   getSession,
   getTasks,
   getUsers,
@@ -171,6 +181,7 @@ export {
   readJson,
   saveGroups,
   saveProgressLogs,
+  saveComplexityTargets,
   saveSession,
   saveTasks,
   saveUsers,

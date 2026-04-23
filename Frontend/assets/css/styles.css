@@ -463,6 +463,10 @@ button {
   padding: 1.2rem;
 }
 
+.task-card.s-pending { background: linear-gradient(to right, rgba(199, 125, 43, 0.05), var(--surface)); }
+.task-card.s-ongoing { background: linear-gradient(to right, rgba(15, 118, 110, 0.05), var(--surface)); }
+.task-card.s-completed { background: linear-gradient(to right, rgba(47, 133, 90, 0.05), var(--surface)); }
+
 .metric-card--teal { background: linear-gradient(145deg, var(--surface-strong), #f0fdfa); }
 .metric-card--blue { background: linear-gradient(145deg, var(--surface-strong), #f0f9ff); }
 .metric-card--amber { background: linear-gradient(145deg, var(--surface-strong), #fffbeb); }

@@ -2,6 +2,7 @@ import {
   addTaskCommentWithApi,
   createTaskWithApi,
   deleteTaskWithApi,
+  syncTaskWithApi,
   updateTaskStatusWithApi,
   updateTaskWithApi,
 } from "./api.js";
@@ -9,6 +10,7 @@ import { getGroups, getProgressLogs, getTasks, getUsers, hydrateAppState } from 
 import { canCreateGroupTask, getGroupById } from "./groups.js";
 
 const VALID_STATUSES = ["Pending", "Ongoing", "Completed"];
+const VALID_COMPLEXITIES = ["XS", "S", "M", "L", "XL"];
 
 function getTaskById(taskId) {
   return getTasks().find((task) => task.id === taskId) ?? null;
@@ -34,7 +36,7 @@ function getUserVisibleTasks(user) {
     }
 
     const group = groups.find((entry) => entry.id === task.groupId);
-    return Boolean(group?.memberIds.includes(user.id));
+    return Boolean(group && (group.memberIds.includes(user.id) || group.leaderId === user.id));
   });
 }
 
@@ -50,6 +52,9 @@ function normalizeTaskInput(input) {
     status: VALID_STATUSES.includes(input.status) ? input.status : "Pending",
     category: input.category?.trim() ?? "",
     priority: ["High", "Medium", "Low"].includes(input.priority) ? input.priority : "Medium",
+    complexitySize: VALID_COMPLEXITIES.includes(input.complexitySize) ? input.complexitySize : "M",
+    githubBranch: input.githubBranch?.trim() ?? "",
+    actualLoC: typeof input.actualLoC === 'number' ? input.actualLoC : null,
     assignedTo: input.assignedTo || null,
     groupId: input.groupId || null,
     isPersonal: Boolean(input.isPersonal),
@@ -90,7 +95,11 @@ function validateTaskInput(task, currentUser) {
     throw new Error("You do not have permission to create or update group tasks.");
   }
 
-  if (task.assignedTo && !group.memberIds.includes(task.assignedTo)) {
+  // Requirement 3.2: Ensure group leaders cannot assign tasks to users outside their group.
+  const memberIds = Array.isArray(group.memberIds) ? group.memberIds : [];
+  const isValidAssignee = memberIds.includes(task.assignedTo) || group.leaderId === task.assignedTo;
+
+  if (task.assignedTo && !isValidAssignee) {
     throw new Error("The assigned user must be a member of the group.");
   }
 }
@@ -158,6 +167,28 @@ async function deleteTask(taskId, currentUser) {
 
 function archiveTask(taskId, currentUser) {
   return updateTask(taskId, { isArchived: true }, currentUser);
+}
+
+async function syncTaskWithGithub(taskId, currentUser) {
+  const task = getTaskById(taskId);
+  if (!task) {
+    throw new Error("Task not found.");
+  }
+
+  const group = getGroupById(task.groupId);
+  const isAuthorized = currentUser.globalRole === "admin" || (group && group.leaderId === currentUser.id);
+
+  if (!isAuthorized) {
+    throw new Error("Only group leaders can manually sync with GitHub.");
+  }
+
+  if (!task.githubBranch) {
+    throw new Error("No GitHub branch linked to this task.");
+  }
+
+  const response = await syncTaskWithApi(taskId);
+  hydrateAppState(response.state);
+  return getTaskById(taskId);
 }
 
 async function addTaskComment(taskId, text, currentUser) {
@@ -259,6 +290,7 @@ export {
   getTaskAssigneeRole,
   getTaskById,
   getUserVisibleTasks,
+  syncTaskWithGithub,
   updateTask,
   updateTaskStatus,
 };

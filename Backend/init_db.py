@@ -58,6 +58,10 @@ def init_db():
             category TEXT,
             status TEXT DEFAULT 'pending',
             taskType TEXT DEFAULT 'group',
+            isPersonal BOOLEAN DEFAULT 0,
+            complexitySize TEXT DEFAULT 'M',
+            githubBranch TEXT,
+            actualLoC INTEGER,
             groupId TEXT,
             assignedTo TEXT,
             createdBy TEXT,
@@ -85,7 +89,7 @@ def init_db():
     demo_users = [
         ("id-admin-001", "admin@demo.com", "Admin User", "admin123", "admin", 1, "", ""),
         ("id-leader-001", "leader@demo.com", "Group Leader", "leader123", "student", 1, "", ""),
-        ("id-student-001", "saeedmuhammadabdulkadir@gmail.com", "Saeed", "student123", "student", 1, "", ")
+        ("id-student-001", "saeedmuhammadabdulkadir@gmail.com", "Saeed", "student123", "student", 1, "", "")
     ]
 
     cursor.executemany('''
