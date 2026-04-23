@@ -16,8 +16,19 @@ import {
   canEditTask,
   canUpdateTaskStatus,
 } from "../tasks.js";
-import { getComplexityTargets, saveComplexityTargets } from "../storage.js";
-import { createEmptyState, createTaskCard, escapeHtml, getAvatarMarkup, formatDateTime, renderFlash } from "../ui.js";
+import { 
+  getComplexityTargets, 
+  saveComplexityTargets, 
+  getUsers 
+} from "../storage.js";
+import { 
+  getAvatarMarkup, 
+  formatDateTime, 
+  renderFlash, 
+  escapeHtml, 
+  createEmptyState, 
+  createTaskCard 
+} from "../ui.js";
 
 const user = await bootstrapProtectedPage({ pageKey: "tasks" });
 
@@ -212,7 +223,7 @@ if (user) {
             <span class="comment-author">${escapeHtml(c.userName)}</span>
             <div class="comment-text">${escapeHtml(c.text)}</div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem;">
-              <span class="comment-time" style="margin-top: 0;">${formatDateTime(c.
+              <span class="comment-time" style="margin-top: 0;">${formatDateTime(c.createdAt)}</span>
                 ${isMe || isAdmin(user) ? `
                   <button class="btn-ghost-danger btn-comment-delete" data-comment-id="${c.id}" title="Delete comment" style="padding: 2px 6px; font-size: 0.7rem;">Delete</button>
                 ` : ""}

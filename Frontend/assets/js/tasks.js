@@ -67,8 +67,8 @@ function normalizeTaskInput(input) {
 }
 
 function validateTaskInput(task, currentUser) {
-  if (!task.title) {
-    throw new Error("Please enter a task title.");
+  if (!task.title || task.title.length < 3) {
+    throw new Error("Task title must be at least 3 characters long.");
   }
 
   if (!task.description) {

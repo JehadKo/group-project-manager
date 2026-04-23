@@ -1,4 +1,4 @@
-import { getGroups, getTasks, getUsers, getProgressLogs } from "./storage.js";
+import { getGroups, getTasks, getUsers, getProgressLogs, getComplexityTargets } from "./storage.js";
 import { getUserGroups } from "./groups.js";
 import { getUserVisibleTasks } from "./tasks.js";
 
@@ -183,9 +183,50 @@ function getAdminOverview() {
   };
 }
 
+/**
+ * Calculates a weighted health score (0-100) for a group.
+ * Professional Metric: Weighs deadline compliance against LoC sync fidelity.
+ */
+function getGroupHealth(groupId) {
+  const progress = getGroupProgress(groupId);
+  if (!progress || progress.total === 0) return { score: 100, label: "Healthy", tone: "positive" };
+
+  const now = new Date();
+  const complexityMap = getComplexityTargets();
+  let healthScore = 100;
+
+  progress.tasks.forEach(task => {
+    // 1. Time-based Risk
+    if (task.status !== "Completed" && task.deadline) {
+      const deadline = new Date(task.deadline);
+      if (deadline < now) {
+        healthScore -= (task.priority === "High" ? 20 : 10);
+      } else {
+        const hoursRemaining = (deadline - now) / (1000 * 60 * 60);
+        if (hoursRemaining < 48 && task.status === "Pending") healthScore -= 5;
+      }
+    }
+
+    // 2. Technical Integrity (Sync Fidelity)
+    if (task.actualLoC !== null) {
+      const targetLoC = complexityMap[task.complexitySize] || 500;
+      const ratio = task.actualLoC / targetLoC;
+
+      if (task.status === "Completed" && ratio < 0.25) healthScore -= 15;
+      else if (ratio > 1.5) healthScore -= 10;
+    }
+  });
+
+  const score = Math.max(0, healthScore);
+  if (score < 50) return { score, label: "Critical", tone: "critical" };
+  if (score < 80) return { score, label: "At Risk", tone: "watch" };
+  return { score, label: "Healthy", tone: "positive" };
+}
+
 export {
   getAdminOverview,
   getGroupProgress,
   getUserDashboardData,
+  getGroupHealth,
   summarizeTasks,
 };

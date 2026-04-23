@@ -3,7 +3,9 @@ import uuid
 import sqlite3
 import requests
 import json
-from flask import Flask, request, jsonify, url_for, redirect, session
+import logging
+from functools import wraps
+from flask import Flask, request, jsonify, url_for, redirect, session, g
 from flask_mail import Mail, Message
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -12,6 +14,10 @@ from authlib.integrations.flask_client import OAuth
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True) # Enable CORS for frontend communication
+
+# --- LOGGING CONFIGURATION ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # --- CONFIGURATION ---
 # In a production app, use environment variables (e.g., os.environ.get('SECRET_KEY'))
@@ -47,12 +53,54 @@ app.config['MAIL_DEFAULT_SENDER'] = 'your-email@gmail.com'
 mail = Mail(app)
 serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
+# --- GLOBAL ERROR HANDLER ---
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Centralized error handling for professional API responses."""
+    logger.error(f"Unhandled Exception: {str(e)}", exc_info=True)
+    if isinstance(e, (SignatureExpired, BadTimeSignature)):
+        return jsonify({"error": "Session or token expired. Please log in again."}), 401
+    return jsonify({"error": "An internal server error occurred. Please try again later."}), 500
+
+# --- VALIDATION SCHEMAS ---
+SCHEMAS = {
+    'register': {
+        'email': {'type': str, 'required': True},
+        'password': {'type': str, 'required': True},
+        'name': {'type': str, 'required': True}
+    },
+    'login': {
+        'email': {'type': str, 'required': True},
+        'password': {'type': str, 'required': True}
+    },
+    'task': {
+        'title': {'type': str, 'required': True},
+        'description': {'type': str, 'required': True},
+        'category': {'type': str, 'required': True},
+        'priority': {'type': str, 'required': False},
+        'complexitySize': {'type': str, 'required': False}
+    },
+    'profile': {
+        'name': {'type': str, 'required': True}
+    },
+    'group': {
+        'groupName': {'type': str, 'required': True}
+    }
+}
+
 def get_db_connection():
-    db_path = os.path.join(os.path.dirname(__file__), 'taskly.db')
-    conn = sqlite3.connect(db_path)
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.row_factory = sqlite3.Row
-    return conn
+    if 'db' not in g:
+        db_path = os.path.join(os.path.dirname(__file__), 'taskly.db')
+        g.db = sqlite3.connect(db_path)
+        g.db.execute("PRAGMA foreign_keys = ON")
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+@app.teardown_appcontext
+def close_db_connection(exception):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 def get_auth_user():
     """Helper to retrieve the current user from the Authorization header."""
@@ -65,10 +113,40 @@ def get_auth_user():
         conn = get_db_connection()
         # Requirement: Ensure soft-deleted users cannot perform authenticated actions
         user = conn.execute('SELECT * FROM users WHERE email = ? AND isActive = 1', (email,)).fetchone()
-        conn.close()
         return dict(user) if user else None
     except:
         return None
+
+def validate_payload(schema_name):
+    """Decorator to validate the JSON body against a schema."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            schema = SCHEMAS.get(schema_name, {})
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "Missing JSON request body"}), 400
+            
+            for field, rules in schema.items():
+                val = data.get(field)
+                if rules.get('required') and not val:
+                    return jsonify({"error": f"Field '{field}' is required"}), 400
+                if val and not isinstance(val, rules['type']):
+                    return jsonify({"error": f"Field '{field}' must be of type {rules['type'].__name__}"}), 400
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def login_required(f):
+    """Decorator to protect routes and inject the authenticated user."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = get_auth_user()
+        if not user:
+            return jsonify({"error": "Unauthorized or session expired"}), 401
+        return f(user, *args, **kwargs)
+    return decorated_function
 
 def get_state(current_user=None):
     """Helper to return the full state required by the frontend hydrateAppState."""
@@ -162,7 +240,6 @@ def get_state(current_user=None):
         query = f'SELECT * FROM progress_logs WHERE taskId IN ({placeholders})'
         progress_logs = [dict(row) for row in conn.execute(query, task_ids).fetchall()]
     
-    conn.close()
     
     return {
         "currentUser": current_user,
@@ -173,6 +250,7 @@ def get_state(current_user=None):
     }
 
 @app.route('/api/register', methods=['POST'])
+@validate_payload('register')
 def register():
     data = request.get_json()
     email = data.get('email', '').lower().strip()
@@ -206,9 +284,7 @@ def register():
             "globalRole": role,
             "isActive": True
         }
-    finally:
-        conn.close()
-    
+
     token = serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
     return jsonify({
         "token": token,
@@ -216,6 +292,7 @@ def register():
     }), 201
 
 @app.route('/api/login', methods=['POST'])
+@validate_payload('login')
 def login():
     data = request.get_json()
     email = data.get('email', '').lower().strip()
@@ -223,7 +300,6 @@ def login():
     
     conn = get_db_connection()
     user_row = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
-    conn.close()
     
     if not user_row or not check_password_hash(user_row['password'], password):
         return jsonify({"error": "Invalid email or password."}), 401
@@ -241,11 +317,8 @@ def login():
     }), 200
 
 @app.route('/api/bootstrap', methods=['GET'])
-def bootstrap():
-    user = get_auth_user()
-    if not user:
-        return jsonify({"error": "Unauthorized or session expired"}), 401
-        
+@login_required
+def bootstrap(user):
     user_data = {k: v for k, v in user.items() if k != 'password'}
     return jsonify({
         "state": get_state(user_data)
@@ -263,7 +336,6 @@ def forgot_password():
     # 1. Check if user exists
     conn = get_db_connection()
     user_row = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
-    conn.close()
 
     if user_row:
         # 2. Generate secure token (expires in 30 minutes)
@@ -314,7 +386,6 @@ def reset_password():
     cursor.execute('UPDATE users SET password = ? WHERE email = ?', (hashed_password, email))
     success = cursor.rowcount > 0
     conn.commit()
-    conn.close()
     
     if success:
         print(f"Password updated for {email}")
@@ -323,10 +394,9 @@ def reset_password():
     return jsonify({"error": "User not found."}), 404
 
 @app.route('/api/tasks', methods=['POST'])
-def create_task():
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+@validate_payload('task')
+def create_task(user):
     data = request.get_json()
     group_id = data.get('groupId')
     assigned_to = data.get('assignedTo')
@@ -342,7 +412,6 @@ def create_task():
         ''', (group_id, assigned_to, group_id, assigned_to)).fetchone()
         
         if not is_member:
-            conn.close()
             return jsonify({"error": "The assigned user must be a member of the group."}), 400
 
     task_id = f"id-{uuid.uuid4()}"
@@ -354,15 +423,12 @@ def create_task():
           data.get('isPersonal', 0), data.get('isArchived', 0), data.get('priority', 'Medium'),
           data.get('complexitySize', 'M'), data.get('githubBranch'), group_id, assigned_to, user['id']))
     conn.commit()
-    conn.close()
     
     return jsonify({"state": get_state(user)}), 201
 
 @app.route('/api/tasks/<task_id>', methods=['PATCH'])
-def update_task(task_id):
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+def update_task(user, task_id):
     data = request.get_json()
     group_id = data.get('groupId')
     assigned_to = data.get('assignedTo')
@@ -378,7 +444,6 @@ def update_task(task_id):
         ''', (group_id, assigned_to, group_id, assigned_to)).fetchone()
         
         if not is_member:
-            conn.close()
             return jsonify({"error": "The assigned user must be a member of the group."}), 400
 
     conn.execute('''
@@ -391,15 +456,12 @@ def update_task(task_id):
           data.get('status'), data.get('taskType'), data.get('isPersonal'), data.get('isArchived'), data.get('priority'), data.get('complexitySize'), data.get('githubBranch'),
           group_id, assigned_to, task_id))
     conn.commit()
-    conn.close()
     
     return jsonify({"state": get_state(user)}), 200
 
 @app.route('/api/tasks/<task_id>/status', methods=['PATCH'])
-def update_task_status(task_id):
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+def update_task_status(user, task_id):
     data = request.get_json()
     status = data.get('status')
     progress_note = data.get('progressNote', '')
@@ -417,16 +479,14 @@ def update_task_status(task_id):
     ''', (log_id, task_id, user['id'], progress_note, status))
     
     conn.commit()
-    conn.close()
     return jsonify({"state": get_state(user)}), 200
 
 @app.route('/api/profile', methods=['PATCH'])
-def update_profile():
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+@validate_payload('profile')
+def update_profile(user):
     data = request.get_json()
-    name = data.get('name', user['name'])
+    name = data.get('name')
     pic = data.get('profilePicture', user['profilePicture'])
 
     conn = get_db_connection()
@@ -434,15 +494,13 @@ def update_profile():
     conn.commit()
     # Fetch fresh user data for the state response
     updated_user = conn.execute('SELECT * FROM users WHERE id = ?', (user['id'],)).fetchone()
-    conn.close()
     
     return jsonify({"state": get_state(dict(updated_user))}), 200
 
 @app.route('/api/groups', methods=['POST'])
-def create_group():
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+@validate_payload('group')
+def create_group(user):
     data = request.get_json()
     name = data.get('groupName')
     if not name: return jsonify({"error": "Group name is required"}), 400
@@ -457,15 +515,12 @@ def create_group():
     conn.execute('INSERT INTO group_members (groupId, userId, role) VALUES (?, ?, ?)',
                  (group_id, user['id'], 'leader'))
     conn.commit()
-    conn.close()
     
     return jsonify({"state": get_state(user)}), 201
 
 @app.route('/api/groups/join', methods=['POST'])
-def join_group():
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+def join_group(user):
     data = request.get_json()
     code = data.get('inviteCode', '').strip().upper()
     
@@ -473,28 +528,23 @@ def join_group():
     group = conn.execute('SELECT id FROM groups WHERE inviteCode = ?', (code,)).fetchone()
     
     if not group:
-        conn.close()
         return jsonify({"error": "Invalid invite code"}), 404
         
     # Check if already a member
     existing = conn.execute('SELECT 1 FROM group_members WHERE groupId = ? AND userId = ?', 
                             (group['id'], user['id'])).fetchone()
     if existing:
-        conn.close()
         return jsonify({"error": "You are already a member of this group"}), 400
 
     conn.execute('INSERT INTO group_members (groupId, userId, role) VALUES (?, ?, ?)',
                  (group['id'], user['id'], 'member'))
     conn.commit()
-    conn.close()
     
     return jsonify({"state": get_state(user)}), 200
 
 @app.route('/api/groups/<group_id>/members/<target_id>/role', methods=['PATCH'])
-def update_group_member_role(group_id, target_id):
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+def update_group_member_role(user, group_id, target_id):
     data = request.get_json()
     new_role = data.get('role')
     
@@ -502,44 +552,35 @@ def update_group_member_role(group_id, target_id):
     group = conn.execute('SELECT leaderId FROM groups WHERE id = ?', (group_id,)).fetchone()
     
     if not group or (group['leaderId'] != user['id'] and user['globalRole'] != 'admin'):
-        conn.close()
         return jsonify({"error": "Forbidden: Only group leaders can manage roles"}), 403
 
     conn.execute('UPDATE group_members SET role = ? WHERE groupId = ? AND userId = ?',
                  (new_role, group_id, target_id))
     conn.commit()
-    conn.close()
     
     return jsonify({"state": get_state(user)}), 200
 
 @app.route('/api/groups/<group_id>/leave', methods=['POST'])
-def leave_group(group_id):
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+def leave_group(user, group_id):
     conn = get_db_connection()
     group = conn.execute('SELECT leaderId FROM groups WHERE id = ?', (group_id,)).fetchone()
     
     if group and group['leaderId'] == user['id']:
-        conn.close()
         return jsonify({"error": "Leaders cannot leave. Transfer leadership or delete the group."}), 400
 
     conn.execute('DELETE FROM group_members WHERE groupId = ? AND userId = ?', (group_id, user['id']))
     conn.commit()
-    conn.close()
     
     return jsonify({"state": get_state(user)}), 200
 
 @app.route('/api/groups/<group_id>', methods=['DELETE'])
-def delete_group(group_id):
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+def delete_group(user, group_id):
     conn = get_db_connection()
     group = conn.execute('SELECT leaderId FROM groups WHERE id = ?', (group_id,)).fetchone()
     
     if not group or (group['leaderId'] != user['id'] and user['globalRole'] != 'admin'):
-        conn.close()
         return jsonify({"error": "Forbidden"}), 403
 
     # Cleanup associated data
@@ -547,15 +588,12 @@ def delete_group(group_id):
     conn.execute('DELETE FROM group_members WHERE groupId = ?', (group_id,))
     conn.execute('DELETE FROM groups WHERE id = ?', (group_id,))
     conn.commit()
-    conn.close()
     
     return jsonify({"state": get_state(user)}), 200
 
 @app.route('/api/groups/<group_id>/leader', methods=['POST'])
-def transfer_leadership(group_id):
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+def transfer_leadership(user, group_id):
     data = request.get_json()
     new_leader_id = data.get('newLeaderId')
     
@@ -563,27 +601,22 @@ def transfer_leadership(group_id):
     group = conn.execute('SELECT leaderId FROM groups WHERE id = ?', (group_id,)).fetchone()
     
     if not group or group['leaderId'] != user['id']:
-        conn.close()
         return jsonify({"error": "Only the current leader can transfer leadership"}), 403
 
     conn.execute('UPDATE groups SET leaderId = ? WHERE id = ?', (new_leader_id, group_id))
     conn.execute('UPDATE group_members SET role = "leader" WHERE groupId = ? AND userId = ?', (group_id, new_leader_id))
     conn.execute('UPDATE group_members SET role = "member" WHERE groupId = ? AND userId = ?', (group_id, user['id']))
     conn.commit()
-    conn.close()
     
     return jsonify({"state": get_state(user)}), 200
 
 @app.route('/api/tasks/<task_id>/sync', methods=['POST'])
-def sync_task(task_id):
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+def sync_task(user, task_id):
     conn = get_db_connection()
     task = conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
     
     if not task or not task['githubBranch']:
-        conn.close()
         return jsonify({"error": "Task not syncable: No GitHub info provided."}), 400
 
     # Requirement 3.11: Autonomously fetch/parse GitHub data
@@ -592,7 +625,6 @@ def sync_task(task_id):
         repo_part, branch = task['githubBranch'].split(':')
         owner, repo = repo_part.split('/')
     except (ValueError, AttributeError):
-        conn.close()
         return jsonify({"error": "Invalid format. Use 'owner/repo:branch' (e.g. Saeed/Taskly:main)"}), 400
 
     # GitHub API: Compare the branch against 'main' to find net additions
@@ -604,15 +636,12 @@ def sync_task(task_id):
     try:
         resp = requests.get(api_url, headers=headers, timeout=10)
         if resp.status_code == 404:
-            conn.close()
             return jsonify({"error": "GitHub repository or branch not found. Please verify the 'owner/repo:branch' format and ensure the repository is public or your token is valid."}), 404
 
         if resp.status_code == 401:
-            conn.close()
             return jsonify({"error": "GitHub API Unauthorized: The GITHUB_TOKEN is invalid or has expired. Please verify your server-side configuration."}), 401
             
         if resp.status_code != 200:
-            conn.close()
             return jsonify({"error": f"GitHub API Error: {resp.status_code}"}), resp.status_code
             
         data = resp.json()
@@ -621,21 +650,17 @@ def sync_task(task_id):
         
         conn.execute('UPDATE tasks SET actualLoC = ? WHERE id = ?', (actual_loc, task_id))
         conn.commit()
-        conn.close()
         return jsonify({"state": get_state(user), "syncedLoC": actual_loc}), 200
     except Exception as e:
-        conn.close()
         return jsonify({"error": f"Connection failed: {str(e)}"}), 500
 
 @app.route('/api/tasks/<task_id>', methods=['DELETE'])
-def delete_task(task_id):
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
+@login_required
+def delete_task(user, task_id):
     conn = get_db_connection()
 
     task = conn.execute('SELECT createdBy, groupId FROM tasks WHERE id = ?', (task_id,)).fetchone()
     if not task:
-        conn.close()
         return jsonify({"error": "Task not found."}), 404
 
     can_delete = user['globalRole'] == 'admin' or task['createdBy'] == user['id']
@@ -645,19 +670,15 @@ def delete_task(task_id):
             can_delete = True
 
     if not can_delete:
-        conn.close()
         return jsonify({"error": "Forbidden: You do not have permission to delete this task."}), 403
 
     conn.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
     conn.commit()
-    conn.close()
     return jsonify({"state": get_state(user)}), 200
 
 @app.route('/api/tasks/<task_id>/comments', methods=['POST'])
-def add_task_comment(task_id):
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+def add_task_comment(user, task_id):
     data = request.get_json()
     text = data.get('text', '').strip()
     if not text:
@@ -670,30 +691,24 @@ def add_task_comment(task_id):
         VALUES (?, ?, ?, ?)
     ''', (comment_id, task_id, user['id'], text))
     conn.commit()
-    conn.close()
     
     return jsonify({"state": get_state(user)}), 201
 
 @app.route('/api/tasks/<task_id>/comments/<comment_id>', methods=['DELETE'])
-def delete_task_comment(task_id, comment_id):
-    user = get_auth_user()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
+@login_required
+def delete_task_comment(user, task_id, comment_id):
     conn = get_db_connection()
     comment = conn.execute('SELECT userId FROM comments WHERE id = ?', (comment_id,)).fetchone()
     
     if not comment:
-        conn.close()
         return jsonify({"error": "Comment not found."}), 404
         
     # Requirement 2.1: Authorization Check
     if comment['userId'] != user['id'] and user['globalRole'] != 'admin':
-        conn.close()
         return jsonify({"error": "Forbidden: You can only delete your own comments."}), 403
         
     conn.execute('DELETE FROM comments WHERE id = ?', (comment_id,))
     conn.commit()
-    conn.close()
     
     return jsonify({"state": get_state(user)}), 200
 
@@ -742,7 +757,6 @@ def social_authorize(name):
             conn.execute('UPDATE users SET githubUsername = ?, profilePicture = CASE WHEN profilePicture = "" THEN ? ELSE profilePicture END WHERE email = ?', 
                          (github_user, picture, link_email))
         conn.commit()
-        conn.close()
         # Redirect back to profile with a success flag
         return redirect("http://127.0.0.1:8000/profile.html?linked=success")
 
@@ -769,7 +783,6 @@ def social_authorize(name):
         conn.execute('UPDATE users SET githubUsername = ? WHERE id = ?', (github_user, user_row['id']))
         conn.commit()
     
-    conn.close()
     
     # Create Taskly Token
     app_token = serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
@@ -792,13 +805,11 @@ def toggle_user_active(user_id):
     conn = get_db_connection()
     user = conn.execute('SELECT isActive FROM users WHERE id = ?', (user_id,)).fetchone()
     if not user:
-        conn.close()
         return jsonify({"error": "User not found"}), 404
         
     new_status = 0 if bool(user['isActive']) else 1
     conn.execute('UPDATE users SET isActive = ? WHERE id = ?', (new_status, user_id))
     conn.commit()
-    conn.close()
     return jsonify({"state": get_state(admin)}), 200
 
 @app.route('/api/admin/users/<user_id>/role', methods=['PATCH'])
@@ -817,7 +828,6 @@ def update_user_role(user_id):
     conn = get_db_connection()
     conn.execute('UPDATE users SET globalRole = ? WHERE id = ?', (new_role, user_id))
     conn.commit()
-    conn.close()
     return jsonify({"state": get_state(admin)}), 200
 
 @app.route('/api/admin/users/<user_id>', methods=['DELETE'])
@@ -834,7 +844,6 @@ def remove_user(user_id):
     # We flip the isActive flag to 0. This prevents login but keeps the record for FK integrity.
     conn.execute('UPDATE users SET isActive = 0 WHERE id = ?', (user_id,))
     conn.commit()
-    conn.close()
     return jsonify({"state": get_state(admin)}), 200
 
 if __name__ == '__main__':

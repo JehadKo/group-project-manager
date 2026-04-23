@@ -1,7 +1,7 @@
 import { bootstrapProtectedPage } from "../app.js";
 import { getCurrentUser } from "../auth.js";
-import { STORAGE_KEYS, getComplexityTargets } from "../storage.js";
-import { getGroupProgress, getUserDashboardData } from "../dashboard.js";
+import { STORAGE_KEYS, getComplexityTargets, getGroups } from "../storage.js";
+import { getGroupProgress, getUserDashboardData, getGroupHealth } from "../dashboard.js";
 import { createEmptyState, createTaskCard, escapeHtml, formatDate, renderProgressMarkup, renderAppChrome } from "../ui.js";
 import { getTaskAssigneeName, getTaskAssigneeRole } from "../tasks.js";
 
@@ -481,6 +481,7 @@ if (user) {
         groupContainer.innerHTML = groups
           .map((group) => {
             const progress = getGroupProgress(group.id);
+            const health = getGroupHealth(group.id);
             
             // Use complexity weights to simulate LoC progress for Group Leaders
             let locMarkup = '';
@@ -513,8 +514,11 @@ if (user) {
             return `
               <div class="group-progress-item">
                 <div class="group-progress-item__header">
-                  <strong>${escapeHtml(group.name)}</strong>
-                  <span>${progress.percent}%</span>
+                  <div style="display:flex; flex-direction:column; gap:2px;">
+                    <strong>${escapeHtml(group.name)}</strong>
+                    <span class="dashboard-chip dashboard-chip--${health.tone}" style="font-size:0.65rem; padding: 1px 6px; width:fit-content;">${health.label} (${health.score}%)</span>
+                  </div>
+                  <span style="font-weight:700;">${progress.percent}%</span>
                 </div>
                 ${renderProgressMarkup(progress.percent)}
                 <div class="group-progress-item__meta">
