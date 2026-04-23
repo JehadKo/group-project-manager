@@ -42,12 +42,12 @@ function getUserDashboardData(user) {
   const pastTasks = tasks.filter((t) => new Date(t.createdAt) <= weekAgo);
   const pastTasksWithStatus = pastTasks.map((t) => {
     const relevantLogs = logs
-      .filter((l) => l.taskId === t.id && new Date(l.timestamp) <= weekAgo)
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      .filter((l) => l.taskId === t.id && new Date(l.createdAt) <= weekAgo)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     return {
       ...t,
-      status: relevantLogs.length ? relevantLogs[0].status : "Pending",
+      status: relevantLogs.length ? relevantLogs[0].statusAtLog : "Pending",
     };
   });
 
@@ -93,7 +93,7 @@ function getUserDashboardData(user) {
     const dateStr = day.toISOString().slice(0, 10);
 
     const completedOnDay = logs.filter(
-      (l) => l.status === "Completed" && l.timestamp.startsWith(dateStr) && tasks.some((t) => t.id === l.taskId)
+      (l) => l.statusAtLog === "Completed" && l.createdAt?.startsWith(dateStr) && tasks.some((t) => t.id === l.taskId)
     ).length;
 
     weeklyActivity.push({
@@ -108,6 +108,21 @@ function getUserDashboardData(user) {
     deadlines: tasks.filter((t) => t.taskType === "deadline").length,
     reminders: tasks.filter((t) => t.taskType === "reminder").length,
   };
+
+  // Calculate Leaderboard: Top 5 contributors by completed tasks
+  const completedTasks = tasks.filter((t) => t.status === "Completed" && t.assignedTo);
+  const userCompletions = {};
+  completedTasks.forEach((t) => {
+    userCompletions[t.assignedTo] = (userCompletions[t.assignedTo] || 0) + 1;
+  });
+
+  const leaderboard = Object.entries(userCompletions)
+    .map(([userId, count]) => ({
+      user: getUsers().find((u) => u.id === userId),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
 
   return {
     overview: currentOverview,
@@ -127,6 +142,7 @@ function getUserDashboardData(user) {
     },
     weeklyActivity,
     typeBreakdown,
+    leaderboard,
   };
 }
 

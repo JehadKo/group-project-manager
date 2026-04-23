@@ -180,9 +180,21 @@ function syncTaskWithApi(taskId) {
   });
 }
 
+function getSocialLoginUrl(provider, token = null) {
+  const baseUrl = `${getApiBase()}/login/${provider}`;
+  return token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
+}
+
 function toggleUserActiveWithApi(userId) {
   return apiRequest(`/admin/users/${userId}/active`, {
     method: "PATCH",
+  });
+}
+
+function updateUserRoleWithApi(userId, payload) {
+  return apiRequest(`/admin/users/${userId}/role`, {
+    method: "PATCH",
+    body: payload,
   });
 }
 
@@ -208,12 +220,14 @@ export {
   requestPasswordResetWithApi,
   resetPasswordWithApi,
   registerWithApi,
+  getSocialLoginUrl,
   syncTaskWithApi,
   toggleUserActiveWithApi,
   transferLeadershipWithApi,
   updateGroupRoleWithApi,
   updateProfileWithApi,
   updateTaskStatusWithApi,
+  updateUserRoleWithApi,
   updateTaskWithApi,
   leaveGroupWithApi,
 };

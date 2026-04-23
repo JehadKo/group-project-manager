@@ -1,6 +1,7 @@
 import {
   addTaskCommentWithApi,
   createTaskWithApi,
+  deleteTaskCommentWithApi,
   deleteTaskWithApi,
   syncTaskWithApi,
   updateTaskStatusWithApi,
@@ -80,6 +81,13 @@ function validateTaskInput(task, currentUser) {
 
   if (task.taskType === "deadline" && !task.deadline) {
     throw new Error("Please select a deadline for this task.");
+  }
+
+  if (task.githubBranch) {
+    const githubBranchPattern = /^[\w.-]+\/[\w.-]+:[\w.-]+$/;
+    if (!githubBranchPattern.test(task.githubBranch)) {
+      throw new Error("Invalid GitHub branch format. Use 'owner/repo:branch' (e.g., Saeed/Taskly:main)");
+    }
   }
 
   if (task.isPersonal) {
@@ -212,6 +220,26 @@ async function addTaskComment(taskId, text, currentUser) {
   return getTaskById(taskId)?.comments?.slice(-1)[0] ?? null;
 }
 
+async function deleteTaskComment(taskId, commentId, currentUser) {
+  const task = getTaskById(taskId);
+  if (!task) {
+    throw new Error("Task not found.");
+  }
+
+  const comment = task.comments?.find((c) => c.id === commentId);
+  if (!comment) {
+    throw new Error("Comment not found.");
+  }
+
+  // Frontend safety check mirroring backend logic
+  if (comment.userId !== currentUser.id && currentUser.globalRole !== "admin") {
+    throw new Error("You do not have permission to delete this comment.");
+  }
+
+  const response = await deleteTaskCommentWithApi(taskId, commentId);
+  hydrateAppState(response.state);
+}
+
 function canUpdateTaskStatus(task, currentUser) {
   if (!task || !currentUser) {
     return false;
@@ -280,6 +308,7 @@ function getTaskAssigneeRole(task) {
 export {
   VALID_STATUSES,
   addTaskComment,
+  deleteTaskComment,
   archiveTask,
   canEditTask,
   canUpdateTaskStatus,

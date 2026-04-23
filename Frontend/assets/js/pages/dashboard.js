@@ -18,6 +18,7 @@ if (user) {
   const typeChartContainer = document.querySelector("#dashboard-type-chart");
   const upcomingContainer = document.querySelector("#upcoming-tasks");
   const groupContainer = document.querySelector("#group-progress");
+  const leaderboardContainer = document.querySelector("#dashboard-leaderboard");
   const title = document.querySelector("#dashboard-title");
   const copy = document.querySelector("#dashboard-copy");
 
@@ -379,6 +380,42 @@ if (user) {
     `;
   }
 
+  function renderLeaderboard(data) {
+    if (!leaderboardContainer) return;
+
+    if (data.leaderboard.length === 0) {
+      leaderboardContainer.innerHTML = createEmptyState("No completions yet", "Completed tasks will rank contributors here.");
+      return;
+    }
+
+    leaderboardContainer.innerHTML = `
+      <div class="dashboard-panel-header">
+        <h2>Top Contributors</h2>
+        <p class="muted small">Most tasks completed across the workspace.</p>
+      </div>
+      <div class="list" style="margin-top: 1rem; gap: 0.8rem;">
+        ${data.leaderboard.map((entry, index) => {
+          const rankColor = index === 0 ? "var(--gold)" : index === 1 ? "#94a3b8" : index === 2 ? "#b45309" : "var(--text-soft)";
+          return `
+            <div class="panel" style="padding: 0.75rem 1rem; background: var(--surface-strong);">
+              <div class="split">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                  <div style="font-family:var(--font-display); font-weight:800; font-size:1.2rem; color:${rankColor}; width:20px;">${index + 1}</div>
+                  ${getAvatarMarkup(entry.user, "avatar-sm")}
+                  <div>
+                    <strong style="font-size:0.9rem;">${escapeHtml(entry.user?.name || "Unknown User")}</strong>
+                    <div class="muted small">${pluralize(entry.count, "task")} closed</div>
+                  </div>
+                </div>
+                <div class="tag" style="background:var(--teal-light); color:var(--teal-dark); font-weight:700;">+${entry.count}</div>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
   function renderDashboard(currentUser) {
     const data = getUserDashboardData(currentUser);
 
@@ -397,6 +434,7 @@ if (user) {
     renderFocusCard(data);
     renderQuickActions(data, currentUser);
     renderInsights(data, currentUser);
+    renderLeaderboard(data);
 
     if (metricContainer) {
       metricContainer.innerHTML = `

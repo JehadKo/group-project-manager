@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Flask",
+            "type": "python",
+            "request": "launch",
+            "module": "flask",
+            "env": {
+                "FLASK_APP": "Backend/app.py",
+                "FLASK_ENV": "development",
+                "GOOGLE_CLIENT_ID": "your-google-id",
+                "GOOGLE_CLIENT_SECRET": "your-google-secret",
+                "GITHUB_CLIENT_ID": "your-github-id",
+                "GITHUB_CLIENT_SECRET": "your-github-secret",
+                "GITHUB_TOKEN": "your-github-token"
+            },
+            "args": ["run", "--no-debugger", "--port", "5000"],
+            "jinja": true
+        }
+    ]
+}

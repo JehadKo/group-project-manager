@@ -275,6 +275,12 @@ function createTaskCard(task, options = {}) {
 
   return `
     <article class="task-card ${statusClass}">
+      ${showGroupName && groupName ? `
+        <div class="task-card__group-eyebrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          ${escapeHtml(groupName)}
+        </div>
+      ` : ""}
       <div class="task-card__print-avatar">${assigneeAvatar}</div>
       <div style="flex: 1; min-width: 0;">
         <div class="task-card__top" style="position: relative; padding-left: 2.2rem;">
@@ -290,7 +296,6 @@ function createTaskCard(task, options = {}) {
               </span>
             ` : ""}
             <span class="tag">${task.taskType === "reminder" ? "Reminder" : escapeHtml(task.category)}</span>
-            ${showGroupName && groupName ? `<span class="tag">${escapeHtml(groupName)}</span>` : ""}
           </div>
           <h3 style="margin-top:0.9rem;">${escapeHtml(task.title)}</h3>
         </div>

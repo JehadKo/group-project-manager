@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   session: "sgpm_session",
   seeded: "sgpm_seeded",
   complexityTargets: "sgpm_complexity_targets",
+  version: "sgpm_db_version"
 };
 
 function readJson(key, fallback) {
@@ -162,6 +163,14 @@ function exportAppData() {
 }
 
 function seedAppData() {
+    // Cache Clearing Logic: If version mismatch, purge old data to prevent conflicts with live backend
+    const CURRENT_VERSION = "v2-live";
+    if (localStorage.getItem(STORAGE_KEYS.version) !== CURRENT_VERSION) {
+        console.warn("Storage version mismatch. Clearing cache for live backend synchronization.");
+        clearAppState({ preserveSession: false });
+        localStorage.setItem(STORAGE_KEYS.version, CURRENT_VERSION);
+    }
+
     // The app now hydrates from the Flask backend, so local demo seeding stays disabled.
 }
 

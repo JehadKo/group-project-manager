@@ -1,5 +1,6 @@
 import { bootstrapPublicPage } from "../app.js";
 import { loginUser, setFlash } from "../auth.js";
+import { getSocialLoginUrl } from "../api.js";
 
 await bootstrapPublicPage();
 
@@ -7,11 +8,28 @@ const demoAccounts = document.querySelector("#demo-accounts");
 if (demoAccounts) {
   demoAccounts.innerHTML = `
     <div class="demo-item">
-      <strong>Live backend mode</strong><br />
-      <span>Sign in with an existing backend account, or register a new one first.</span>
+      <strong>New to Taskly?</strong><br />
+      <span><a href="register.html" style="color: var(--teal); font-weight: 600;">Create an account</a> to sign up with email, or use the social buttons below for automatic sign-up.</span>
     </div>
   `;
 }
+
+// Wire up social login buttons (Assuming IDs match your HTML)
+['google', 'github', 'facebook'].forEach(provider => {
+  const btn = document.querySelector(`#login-${provider}`);
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const submitBtn = document.querySelector("#submit-btn");
+      const allSocialBtns = document.querySelectorAll(".btn-social");
+
+      if (submitBtn) submitBtn.disabled = true;
+      allSocialBtns.forEach(b => b.disabled = true);
+      btn.classList.add('loading');
+
+      window.location.href = getSocialLoginUrl(provider);
+    });
+  }
+});
 
 const form = document.querySelector("#login-form");
 form?.addEventListener("submit", async (event) => {

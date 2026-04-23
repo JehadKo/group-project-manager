@@ -150,7 +150,8 @@ function getGroupMembers(groupId) {
     return [];
   }
 
-  return getUsers().filter((user) => group.memberIds.includes(user.id));
+  // Filter out inactive users to ensure they cannot be assigned new tasks or appear in active member lists
+  return getUsers().filter((user) => group.memberIds.includes(user.id) && user.isActive);
 }
 
 export {

@@ -1,5 +1,5 @@
 import { ensureRole, logoutUser, setFlash, syncSessionState } from "./auth.js";
-import { getSession, seedAppData } from "./storage.js";
+import { getSession, seedAppData, saveSession } from "./storage.js";
 import { applyTheme, renderAppChrome, renderFlash, renderPublicHeader } from "./ui.js";
 
 async function bootstrapPublicPage() {
@@ -22,6 +22,18 @@ async function bootstrapPublicPage() {
 async function bootstrapProtectedPage({ pageKey, roles = [] } = {}) {
   seedAppData();
   applyTheme();
+
+  // Check for OAuth token in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const oauthToken = urlParams.get('token');
+  if (oauthToken) {
+    saveSession({
+      token: oauthToken,
+      loggedInAt: new Date().toISOString()
+    }, false);
+    // Clean URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 
   const session = getSession();
   if (!session?.token) {

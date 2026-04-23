@@ -3,6 +3,7 @@ import { setFlash, isAdmin } from "../auth.js";
 import { canCreateGroupTask, getGroupMembers, getUserGroups, getGroupById } from "../groups.js";
 import {
   addTaskComment,
+  deleteTaskComment,
   createTask,
   deleteTask,
   getTaskAssigneeName,
@@ -62,6 +63,10 @@ if (user) {
   const cancelBulkDeleteBtn = document.querySelector("#cancel-bulk-delete");
   const confirmBulkDeleteBtn = document.querySelector("#confirm-bulk-delete");
 
+  const taskDeleteModal = document.querySelector("#task-delete-modal");
+  const cancelTaskDeleteBtn = document.querySelector("#cancel-task-delete");
+  const confirmTaskDeleteBtn = document.querySelector("#confirm-task-delete");
+
   const settingsBtn = document.querySelector("#complexity-settings-btn");
   const settingsDrawer = document.querySelector("#settings-drawer");
   const settingsOverlay = document.querySelector("#settings-overlay");
@@ -71,6 +76,7 @@ if (user) {
   let activeDiscussionTaskId = null;
   let activeRoleFilter = "all";
   let activeSearchQuery = "";
+  let taskToDeleteId = null;
   let activeSort = "deadline";
   let activeCategoryFilter = "all";
   let activePriorityFilter = "all";
@@ -118,6 +124,9 @@ if (user) {
 
   function syncTaskScopeUi() {
     const isGroup = taskScope.value === "group";
+    document.querySelector("#scope-personal")?.classList.toggle("active", !isGroup);
+    document.querySelector("#scope-group")?.classList.toggle("active", isGroup);
+
     groupSelect.closest(".field").classList.toggle("is-hidden", !isGroup);
     assigneeSelect.closest(".field").classList.toggle("is-hidden", !isGroup && user.globalRole !== "admin");
     deadlineInput.closest(".field").classList.toggle("is-hidden", taskType.value === "reminder");
@@ -203,7 +212,10 @@ if (user) {
             <span class="comment-author">${escapeHtml(c.userName)}</span>
             <div class="comment-text">${escapeHtml(c.text)}</div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem;">
-              <span class="comment-time" style="margin-top: 0;">${formatDateTime(c.timestamp)}</span>
+              <span class="comment-time" style="margin-top: 0;">${formatDateTime(c.
+                ${isMe || isAdmin(user) ? `
+                  <button class="btn-ghost-danger btn-comment-delete" data-comment-id="${c.id}" title="Delete comment" style="padding: 2px 6px; font-size: 0.7rem;">Delete</button>
+                ` : ""}
               ${isMe ? `
                 <span style="display: flex; align-items: center; gap: 3px; font-size: 0.65rem; color: var(--teal); font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em;">
                   ${isRead 
@@ -212,6 +224,7 @@ if (user) {
                   }
                 </span>
               ` : ""}
+              </div>
             </div>
           </div>
         </div>
@@ -267,6 +280,7 @@ if (user) {
 
   function renderTaskSections() {
     const tasks = getUserVisibleTasks(user);
+    const allUsers = getUsers();
     updateCategoryFilterOptions(tasks);
 
     const filteredTasks = tasks.filter((task) => {
@@ -298,6 +312,66 @@ if (user) {
         : `Full workspace audit as of ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`;
     }
 
+    // Calculate Top Contributors (Requirement 4.2 extension)
+    const completedTasks = filteredTasks.filter(t => t.status === "Completed");
+    const contributorMap = {};
+    completedTasks.forEach(t => {
+      if (t.assignedTo) contributorMap[t.assignedTo] = (contributorMap[t.assignedTo] || 0) + 1;
+    });
+
+    const topContributors = Object.entries(contributorMap)
+      .map(([userId, count]) => ({ name: allUsers.find(u => u.id === userId)?.name || "Unknown", count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+
+    const contributorsEl = document.querySelector("#print-top-contributors");
+    if (contributorsEl) {
+      contributorsEl.innerHTML = topContributors.length > 0
+        ? topContributors.map(c => `
+          <div style="display:flex; align-items:center; gap:0.6rem;">
+            <div style="width:28px; height:28px; border-radius:50%; background:var(--accent); color:white; display:grid; place-items:center; font-size:0.65rem; font-weight:700;">
+              ${c.name.slice(0, 2).toUpperCase()}
+            </div>
+            <div style="display:flex; flex-direction:column;">
+              <strong style="font-size:0.85rem; color:var(--ink);">${escapeHtml(c.name)}</strong>
+              <span class="muted" style="font-size:0.65rem;">${c.count} ${c.count === 1 ? 'task' : 'tasks'} done</span>
+            </div>
+          </div>`).join("")
+        : '<span class="muted small">No completions recorded in this view.</span>';
+    }
+
+    // Calculate Task Distribution by Category (Requirement 4.2 extension)
+    const categoryMap = {};
+    filteredTasks.forEach(t => {
+      const cat = t.category || "Uncategorized";
+      categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+    });
+
+    const distributionBody = document.querySelector("#print-distribution-body");
+    if (distributionBody) {
+      const distData = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]);
+      distributionBody.innerHTML = distData.length > 0
+        ? distData.map(([cat, count]) => {
+            const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+            return `
+              <tr>
+                <td><strong style="color:var(--ink);">${escapeHtml(cat)}</strong></td>
+                <td>${count} ${count === 1 ? 'task' : 'tasks'}</td>
+                <td>${pct}%</td>
+              </tr>
+            `;
+          }).join("")
+        : '<tr><td colspan="3" style="text-align:center; padding: 2rem;" class="muted small">No category data available in this view.</td></tr>';
+    }
+
+    const sortedTasks = [...filteredTasks].sort((a, b) => {
+      if (activeSort === "deadline") {
+        return (a.deadline ? new Date(a.deadline).getTime() : Infinity) - (b.deadline ? new Date(b.deadline).getTime() : Infinity);
+      }
+      const pMap = { High: 3, Medium: 2, Low: 1 }, sMap = { Ongoing: 3, Pending: 2, Completed: 1 };
+      return activeSort === "priority" ? pMap[b.priority || "Medium"] - pMap[a.priority || "Medium"] : sMap[b.status] - sMap[a.status];
+    });
+
     // 1. Handle "Due Today" High Priority Section (now respects global filters)
     const todayStr = new Date().toISOString().slice(0, 10);
     const dueTodayTasks = filteredTasks.filter((t) => {
@@ -312,6 +386,7 @@ if (user) {
           .map((task) => createTaskCard(task, {
             assigneeName: getTaskAssigneeName(task),
             assigneeRole: getTaskAssigneeRole(task),
+            assigneeAvatar: getAvatarMarkup(allUsers.find(u => u.id === task.assignedTo)),
             showGroupName: !task.isPersonal,
             groupName: task.groupId ? getGroupById(task.groupId)?.groupName : "",
           }))
@@ -334,6 +409,7 @@ if (user) {
             createTaskCard(task, {
               assigneeName: getTaskAssigneeName(task),
               assigneeRole: getTaskAssigneeRole(task),
+              assigneeAvatar: getAvatarMarkup(allUsers.find(u => u.id === task.assignedTo)),
               actions: `
                 <button class="btn-ghost" data-action="edit" data-task-id="${task.id}" type="button">Edit</button>
                 <button class="btn-danger" data-action="delete" data-task-id="${task.id}" type="button">Delete</button>
@@ -385,6 +461,9 @@ if (user) {
             return createTaskCard(task, {
               assigneeName: getTaskAssigneeName(task),
               assigneeRole: getTaskAssigneeRole(task),
+              assigneeAvatar: getAvatarMarkup(allUsers.find(u => u.id === task.assignedTo)),
+              showGroupName: true,
+              groupName: task.groupId ? (getGroupById(task.groupId)?.groupName || "") : "General",
               actions: actions.join(""),
             });
           })
@@ -401,24 +480,9 @@ if (user) {
     });
 
     document.querySelectorAll("[data-action='delete']").forEach((button) => {
-      button.addEventListener("click", async () => {
-        try {
-          const taskId = button.dataset.taskId;
-          await deleteTask(taskId, user);
-
-          if (editingTaskId === taskId) {
-            resetForm();
-          }
-
-          if (activeDiscussionTaskId === taskId) {
-            closeDrawer();
-          }
-
-          showInlineFlash("Task deleted successfully.", "success");
-          renderTaskSections();
-        } catch (error) {
-          showInlineFlash(error.message, "error");
-        }
+      button.addEventListener("click", () => {
+        taskToDeleteId = button.dataset.taskId;
+        taskDeleteModal?.classList.add("open");
       });
     });
 
@@ -535,6 +599,20 @@ if (user) {
   document.querySelector("#close-drawer")?.addEventListener("click", closeDrawer);
   drawerBackdrop?.addEventListener("click", closeDrawer);
 
+  drawerBody?.addEventListener("click", async (e) => {
+    if (e.target.classList.contains("btn-comment-delete")) {
+      const commentId = e.target.dataset.commentId;
+      if (confirm("Are you sure you want to delete this comment?")) {
+        try {
+          await deleteTaskComment(activeDiscussionTaskId, commentId, user);
+          renderComments(getTaskById(activeDiscussionTaskId));
+        } catch (error) {
+          showInlineFlash(error.message, "error");
+        }
+      }
+    }
+  });
+
   commentForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const text = commentInput.value.trim();
@@ -579,6 +657,15 @@ if (user) {
     };
 
     try {
+      const submitBtn = document.querySelector("#save-btn");
+      const originalHtml = submitBtn.innerHTML;
+      
+      const showSuccessFeedback = () => {
+        submitBtn.classList.add("success");
+        submitBtn.innerHTML = `✓ Saved!`;
+        setTimeout(() => { submitBtn.classList.remove("success"); submitBtn.innerHTML = originalHtml; }, 2000);
+      };
+
       if (editingTaskId) {
         await updateTask(editingTaskId, payload, user);
         showInlineFlash("Task updated successfully.", "success");
@@ -586,6 +673,7 @@ if (user) {
         await createTask(payload, user);
         showInlineFlash("Task created successfully.", "success");
       }
+      showSuccessFeedback();
       resetForm();
       renderTaskSections();
     } catch (error) {
@@ -667,6 +755,34 @@ if (user) {
     } finally {
       confirmBulkDeleteBtn.disabled = false;
       confirmBulkDeleteBtn.textContent = originalText;
+    }
+  });
+
+  cancelTaskDeleteBtn?.addEventListener("click", () => {
+    taskDeleteModal?.classList.remove("open");
+    taskToDeleteId = null;
+  });
+
+  confirmTaskDeleteBtn?.addEventListener("click", async () => {
+    if (!taskToDeleteId) return;
+    try {
+      const taskId = taskToDeleteId;
+      await deleteTask(taskId, user);
+
+      if (editingTaskId === taskId) {
+        resetForm();
+      }
+
+      if (activeDiscussionTaskId === taskId) {
+        closeDrawer();
+      }
+
+      showInlineFlash("Task deleted successfully.", "success");
+      taskDeleteModal?.classList.remove("open");
+      taskToDeleteId = null;
+      renderTaskSections();
+    } catch (error) {
+      showInlineFlash(error.message, "error");
     }
   });
 

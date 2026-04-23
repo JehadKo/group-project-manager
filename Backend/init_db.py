@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from werkzeug.security import generate_password_hash
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'taskly.db')
 
@@ -59,15 +60,33 @@ def init_db():
             status TEXT DEFAULT 'pending',
             taskType TEXT DEFAULT 'group',
             isPersonal BOOLEAN DEFAULT 0,
+            isArchived BOOLEAN DEFAULT 0,
+            priority TEXT DEFAULT 'Medium',
             complexitySize TEXT DEFAULT 'M',
             githubBranch TEXT,
             actualLoC INTEGER,
             groupId TEXT,
             assignedTo TEXT,
             createdBy TEXT,
+            progressNote TEXT,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (groupId) REFERENCES groups (id),
             FOREIGN KEY (assignedTo) REFERENCES users (id),
             FOREIGN KEY (createdBy) REFERENCES users (id)
+        )
+    ''')
+
+    # Create Comments Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS comments (
+            id TEXT PRIMARY KEY,
+            taskId TEXT,
+            userId TEXT,
+            text TEXT NOT NULL,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            lastEditedAt DATETIME DEFAULT NULL,
+            FOREIGN KEY (taskId) REFERENCES tasks (id) ON DELETE CASCADE,
+            FOREIGN KEY (userId) REFERENCES users (id)
         )
     ''')
 
@@ -84,18 +103,6 @@ def init_db():
             FOREIGN KEY (userId) REFERENCES users (id)
         )
     ''')
-
-    # Seed initial demo data matching the application defaults in app.py
-    demo_users = [
-        ("id-admin-001", "admin@demo.com", "Admin User", "admin123", "admin", 1, "", ""),
-        ("id-leader-001", "leader@demo.com", "Group Leader", "leader123", "student", 1, "", ""),
-        ("id-student-001", "saeedmuhammadabdulkadir@gmail.com", "Saeed", "student123", "student", 1, "", "")
-    ]
-
-    cursor.executemany('''
-        INSERT OR IGNORE INTO users (id, email, name, password, globalRole, isActive, profilePicture, githubUsername)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', demo_users)
 
     conn.commit()
     conn.close()
