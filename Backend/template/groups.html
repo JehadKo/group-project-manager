@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Groups | Taskly</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #0d1f1a; --ink-soft: #1e3530; --paper: #f2f8f5; --teal: #1a9e74;
+      --teal-dark: #127a59; --teal-light: #d0f2e8; --teal-mid: #a8e6d0;
+      --blue: #1478b0; --blue-light: #dceef9; --mint: #34d9a5; --muted: #5a7a72;
+      --border: #c8e2d9; --white: #ffffff; --red: #d64040; --red-light: #fde8e8;
+      --amber: #e0900a; --amber-light: #fef3dc; --sidebar-w: 240px;
+      --radius: 16px; --radius-sm: 10px; --shadow: 0 4px 24px rgba(26,158,116,.08);
+      --shadow-lg: 0 16px 48px rgba(26,158,116,.13);
+    }
+    html, body { height: 100%; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); font-size: 15px; line-height: 1.6; display: flex; flex-direction: column; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
+    @keyframes slideInLeft { from { opacity:0; transform:translateX(-22px); } to { opacity:1; transform:none; } }
+    @keyframes slideInRight { from { opacity:0; transform:translateX(22px); } to { opacity:1; transform:none; } }
+
+    .sidebar { position: fixed; top:0; left:0; bottom:0; width: var(--sidebar-w); background: var(--ink); display: flex; flex-direction: column; z-index: 200; animation: slideInLeft .55s cubic-bezier(.22,1,.36,1) both; }
+    .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 1.4rem 1.4rem 1rem; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,.07); margin-bottom: .5rem; }
+    .sidebar-logo-icon { width: 32px; height: 32px; border-radius: 9px; background: var(--teal); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
+    .sidebar-logo:hover .sidebar-logo-icon { transform: rotate(-12deg) scale(1.1); }
+    .sidebar-logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: #fff; }
+    .sidebar-logo-text span { color: var(--mint); }
+    .sidebar-section-label { font-size: .63rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.28); padding: .8rem 1.4rem .3rem; }
+    .sidebar-nav { flex:1; overflow-y:auto; padding-bottom:1rem; }
+    .sidebar-link { display: flex; align-items: center; gap: .75rem; padding: .6rem 1.4rem; color: rgba(255,255,255,.5); text-decoration: none; font-size: .88rem; transition: color .15s, background .15s; position: relative; }
+    .sidebar-link svg { width:16px; height:16px; flex-shrink:0; }
+    .sidebar-link:hover { color:#fff; background:rgba(255,255,255,.05); }
+    .sidebar-link.active { color:#fff; background:rgba(52,217,165,.12); }
+    .sidebar-link.active::before { content:''; position:absolute; left:0; top:4px; bottom:4px; width:3px; background:var(--mint); border-radius:0 2px 2px 0; }
+    .sidebar-badge { margin-left:auto; background:var(--teal); color:#fff; font-size:.63rem; font-weight:700; padding:.1rem .42rem; border-radius:50px; }
+    .sidebar-footer { padding:1rem 1.4rem; border-top:1px solid rgba(255,255,255,.07); }
+    .sidebar-user { display:flex; align-items:center; gap:.7rem; }
+    .sidebar-user-avatar { width:32px; height:32px; border-radius:50%; background:var(--ink-soft); border:2px solid rgba(255,255,255,.15); display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:700; color:var(--mint); flex-shrink:0; }
+    .sidebar-user-name { font-size:.82rem; font-weight:500; color:#fff; }
+    .sidebar-user-role { font-size:.7rem; color:rgba(255,255,255,.4); }
+    .layout { margin-left:var(--sidebar-w); display:flex; flex-direction:column; min-height:100vh; }
+    .topbar { background: rgba(242,248,245,.92); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); padding: .9rem 2rem; display: flex; align-items:center; justify-content:space-between; position: sticky; top:0; z-index:100; }
+    .topbar-breadcrumb { display:flex; align-items:center; gap:.5rem; font-size:.82rem; color:var(--muted); }
+    .topbar-breadcrumb strong { color:var(--ink); font-weight:600; }
+    .topbar-breadcrumb span { opacity:.4; }
+    .page { padding:2rem 2rem 3rem; }
+    .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:1.8rem; gap:1rem; animation: fadeUp .5s .25s both; }
+    .page-eyebrow { font-size:.7rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--teal); margin-bottom:.25rem; }
+    .page-title { font-family:'Syne',sans-serif; font-size:1.75rem; font-weight:800; line-height:1.15; letter-spacing:-.02em; margin-bottom:.25rem; }
+    .page-sub { font-size:.87rem; color:var(--muted); font-weight:300; }
+
+    .two-column { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom: 2rem; animation: slideInLeft .55s .35s cubic-bezier(.22,1,.36,1) both;}
+    .panel { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; box-shadow:var(--shadow); }
+    .panel h2 { font-family:'Syne',sans-serif; font-size:1.25rem; margin-bottom:0.5rem; }
+    .panel p.muted { color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem; line-height:1.5; }
+    .field { display:flex; flex-direction:column; gap:.3rem; margin-bottom:1rem; }
+    .field label { font-size:.7rem; font-weight:700; text-transform:uppercase; color:var(--muted); letter-spacing:.05em; }
+    .field input { padding:.65rem .9rem; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:.9rem; outline:none; transition:border-color .2s, box-shadow .2s; width:100%; }
+    .field input:focus { border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-light); }
+    .btn { display:inline-flex; align-items:center; justify-content:center; padding:.7rem 1.4rem; background:var(--teal); color:#fff; font-family:'DM Sans',sans-serif; font-weight:600; font-size:.9rem; border:none; border-radius:50px; cursor:pointer; transition:all .2s; box-shadow:0 2px 10px rgba(26,158,116,.25); width:100%; }
+    .btn:hover { background:var(--teal-dark); transform:translateY(-2px); box-shadow:0 6px 18px rgba(26,158,116,.35); }
+    .btn-secondary { display:inline-flex; align-items:center; justify-content:center; padding:.7rem 1.4rem; background:var(--blue); color:#fff; font-family:'DM Sans',sans-serif; font-weight:600; font-size:.9rem; border:none; border-radius:50px; cursor:pointer; transition:all .2s; box-shadow:0 2px 10px rgba(20,120,176,.25); width:100%; }
+    .btn-secondary:hover { background:#0f5e8f; transform:translateY(-2px); box-shadow:0 6px 18px rgba(20,120,176,.35); }
+
+    .split { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.5rem; }
+    .split h2 { margin:0; }
+    .split .helper { font-size:0.85rem; color:var(--muted); }
+
+    .cards-grid { display:grid; grid-template-columns:1fr; gap:1.5rem; }
+    .group-card { border:1px solid var(--border); border-radius:var(--radius-sm); padding:1.5rem; background:var(--white); box-shadow:var(--shadow); position: relative; }
+    .group-card h3 { margin:0 0 .5rem 0; font-family:'Syne',sans-serif; font-size:1.4rem; color:var(--ink); }
+    .group-card p { font-size:.9rem; color:var(--muted); margin:0 0 .5rem 0; }
+    .group-card ul { margin:1rem 0 0 0; padding-left:1.5rem; font-size:.9rem; color:var(--ink); }
+    .group-card li { margin-bottom:.3rem; }
+    .group-card em { color:var(--muted); font-style:normal; font-size:0.8rem; background:var(--paper); padding:0.1rem 0.4rem; border-radius:4px; margin-left:0.5rem; }
+
+    .flash-stack { display:flex; flex-direction:column; gap:.5rem; margin-bottom:1.5rem; }
+    .flash { padding: 0.7rem 1rem; border-radius: var(--radius-sm); font-size: 0.83rem; font-weight: 500; border: 1px solid; animation: fadeUp 0.3s ease; }
+    .flash-error   { background: #fff2f0; border-color: #ffd3cc; color: #991414; }
+    .flash-success { background: #f0fdf6; border-color: #c6f0da; color: #166534; }
+    .flash-warning { background: #fff4e0; border-color: #ffe0b2; color: #a05c00; }
+    .flash-info { background: #e0f2fe; border-color: #bae6fd; color: #0369a1; }
+
+    .active-badge { position: absolute; top: 1rem; right: 1rem; background: var(--teal-light); color: var(--teal-dark); font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    @media (max-width:900px) {
+      .sidebar { transform:translateX(-100%); }
+      .layout { margin-left:0; }
+      .two-column { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <a href="{{ url_for('index') }}" class="sidebar-logo">
+    <div class="sidebar-logo-icon"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><polyline points="4,10 8,14 16,6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <span class="sidebar-logo-text">Task<span>ly</span></span>
+  </a>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section-label">Overview</div>
+    <a href="{{ url_for('dashboard') }}" class="sidebar-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <div class="sidebar-section-label">Work</div>
+    <a href="{{ url_for('tasks') }}" class="sidebar-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Tasks
+    </a>
+    <a href="{{ url_for('groups') }}" class="sidebar-link active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Groups
+    </a>
+    <div class="sidebar-section-label">Account</div>
+    <a href="{{ url_for('logout') }}" class="sidebar-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Logout
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">{{ current_user.username[:2]|upper }}</div>
+      <div>
+        <div class="sidebar-user-name">{{ current_user.username }}</div>
+        <div class="sidebar-user-role">User</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div class="layout">
+  <header class="topbar">
+    <div class="topbar-breadcrumb">
+      <span>Taskly</span><span>/</span><strong>Groups</strong>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Group Management</div>
+        <h1 class="page-title">Build teams and control permissions clearly.</h1>
+        <p class="page-sub">Create a group, share an invite code, and manage who can contribute.</p>
+      </div>
+    </div>
+
+    <div id="flash-container" class="flash-stack">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+    </div>
+
+    <section class="two-column">
+      <form id="create-group-form" class="panel" method="POST" action="{{ url_for('create_group') }}">
+        <h2>Create a Group</h2>
+        <p class="muted">Any student can create a group and automatically become the leader.</p>
+        <div class="field">
+          <label for="name">Group Name</label>
+          <input id="name" name="name" required />
+        </div>
+        <div class="field">
+          <label for="repo_url">GitHub Repo URL (Optional)</label>
+          <input id="repo_url" name="repo_url" placeholder="owner/repo" />
+        </div>
+        <button class="btn" type="submit">Create Group</button>
+      </form>
+
+      <form id="join-group-form" class="panel" method="POST" action="{{ url_for('join_group') }}">
+        <h2>Join with Invite Code</h2>
+        <p class="muted">Students can join an existing project group using the code shared by the leader.</p>
+        <div class="field">
+          <label for="invite_code">Invite Code</label>
+          <input id="invite_code" name="invite_code" required />
+        </div>
+        <button class="btn-secondary" type="submit" style="margin-top: calc(48px + 1rem + 15px);">Join Group</button>
+      </form>
+    </section>
+
+    <section class="panel" style="animation: slideInRight .55s .45s cubic-bezier(.22,1,.36,1) both;">
+      <div class="split">
+        <h2>Your Groups</h2>
+        <span class="helper">You can belong to multiple groups. Select one to view its tasks.</span>
+      </div>
+      <div class="cards-grid" style="margin-top: 1.5rem;">
+        {% if current_user.groups %}
+          {% for group in current_user.groups %}
+          <div class="group-card">
+            {% if current_user.current_group_id == group.id %}
+              <span class="active-badge">Active</span>
+            {% endif %}
+            <h3>{{ group.name }}</h3>
+            <p>Invite Code: <strong>{{ group.invite_code }}</strong></p>
+            <p>Repo URL: <a href="{{ group.repo_url }}" target="_blank" style="color:var(--teal);">{{ group.repo_url }}</a></p>
+
+            <form action="{{ url_for('switch_group', group_id=group.id) }}" method="POST" style="margin-top: 1rem;">
+              <button type="submit" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem; font-size: 0.8rem; {% if current_user.current_group_id == group.id %}opacity: 0.5; cursor: not-allowed;{% endif %}" {% if current_user.current_group_id == group.id %}disabled{% endif %}>
+                {% if current_user.current_group_id == group.id %}Currently Viewing{% else %}View Dashboard{% endif %}
+              </button>
+            </form>
+
+            <details style="margin-top: 1rem; cursor: pointer; color: var(--muted); font-size: 0.85rem;">
+              <summary style="font-weight: 600; margin-bottom: 0.5rem;">Show Members ({{ group.users|length }})</summary>
+              <ul style="margin-top: 0.5rem;">
+                {% for member in group.users %}
+                  <li>{{ member.username }} <em>{{ member.github_username or 'No GitHub linked' }}</em></li>
+                {% endfor %}
+              </ul>
+            </details>
+          </div>
+          {% endfor %}
+        {% else %}
+        <div style="padding: 2rem; border: 1px dashed var(--border); border-radius: var(--radius-sm); text-align: center; color: var(--muted); font-size: 0.9rem;">
+          You haven't joined a group yet. Create or join one above.
+        </div>
+        {% endif %}
+      </div>
+    </section>
+  </main>
+</div>
+
+</body>
+</html>
