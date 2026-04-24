@@ -1,384 +1,187 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tasks — Taskly</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --ink: #0d1f1a; --ink-soft: #1e3530; --paper: #f2f8f5; --teal: #1a9e74;
-      --teal-dark: #127a59; --teal-light: #d0f2e8; --teal-mid: #a8e6d0;
-      --blue: #1478b0; --blue-light: #dceef9; --mint: #34d9a5; --muted: #5a7a72;
-      --border: #c8e2d9; --white: #ffffff; --red: #d64040; --red-light: #fde8e8;
-      --amber: #e0900a; --amber-light: #fef3dc; --sidebar-w: 240px;
-      --radius: 16px; --radius-sm: 10px; --shadow: 0 4px 24px rgba(26,158,116,.08);
-      --shadow-lg: 0 16px 48px rgba(26,158,116,.13);
-    }
-    html, body { height: 100%; }
-    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); font-size: 15px; line-height: 1.6; display: flex; flex-direction: column; }
-    @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
-    @keyframes slideInLeft { from { opacity:0; transform:translateX(-22px); } to { opacity:1; transform:none; } }
-    @keyframes slideInRight { from { opacity:0; transform:translateX(22px); } to { opacity:1; transform:none; } }
-    .sidebar { position: fixed; top:0; left:0; bottom:0; width: var(--sidebar-w); background: var(--ink); display: flex; flex-direction: column; z-index: 200; animation: slideInLeft .55s cubic-bezier(.22,1,.36,1) both; }
-    .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 1.4rem 1.4rem 1rem; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,.07); margin-bottom: .5rem; }
-    .sidebar-logo-icon { width: 32px; height: 32px; border-radius: 9px; background: var(--teal); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
-    .sidebar-logo:hover .sidebar-logo-icon { transform: rotate(-12deg) scale(1.1); }
-    .sidebar-logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: #fff; }
-    .sidebar-logo-text span { color: var(--mint); }
-    .sidebar-section-label { font-size: .63rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.28); padding: .8rem 1.4rem .3rem; }
-    .sidebar-nav { flex:1; overflow-y:auto; padding-bottom:1rem; }
-    .sidebar-link { display: flex; align-items: center; gap: .75rem; padding: .6rem 1.4rem; color: rgba(255,255,255,.5); text-decoration: none; font-size: .88rem; transition: color .15s, background .15s; position: relative; }
-    .sidebar-link svg { width:16px; height:16px; flex-shrink:0; }
-    .sidebar-link:hover { color:#fff; background:rgba(255,255,255,.05); }
-    .sidebar-link.active { color:#fff; background:rgba(52,217,165,.12); }
-    .sidebar-link.active::before { content:''; position:absolute; left:0; top:4px; bottom:4px; width:3px; background:var(--mint); border-radius:0 2px 2px 0; }
-    .sidebar-badge { margin-left:auto; background:var(--teal); color:#fff; font-size:.63rem; font-weight:700; padding:.1rem .42rem; border-radius:50px; }
-    .sidebar-footer { padding:1rem 1.4rem; border-top:1px solid rgba(255,255,255,.07); }
-    .sidebar-user { display:flex; align-items:center; gap:.7rem; }
-    .sidebar-user-avatar { width:32px; height:32px; border-radius:50%; background:var(--ink-soft); border:2px solid rgba(255,255,255,.15); display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:700; color:var(--mint); flex-shrink:0; }
-    .sidebar-user-name { font-size:.82rem; font-weight:500; color:#fff; }
-    .sidebar-user-role { font-size:.7rem; color:rgba(255,255,255,.4); }
-    .layout { margin-left:var(--sidebar-w); display:flex; flex-direction:column; min-height:100vh; }
-    .topbar { background: rgba(242,248,245,.92); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); padding: .9rem 2rem; display: flex; align-items:center; justify-content:space-between; position: sticky; top:0; z-index:100; }
-    .topbar-breadcrumb { display:flex; align-items:center; gap:.5rem; font-size:.82rem; color:var(--muted); }
-    .topbar-breadcrumb strong { color:var(--ink); font-weight:600; }
-    .topbar-breadcrumb span { opacity:.4; }
-    .topbar-actions { display:flex; gap:.6rem; align-items:center; }
-    .btn { display:inline-flex; align-items:center; gap:.38rem; padding:.58rem 1.25rem; border-radius:50px; font-family:'DM Sans',sans-serif; font-weight:500; font-size:.87rem; cursor:pointer; text-decoration:none; transition:all .2s; border:none; white-space:nowrap; position:relative; overflow:hidden; }
-    .btn svg { width:14px; height:14px; flex-shrink:0; }
-    .btn-primary { background:var(--teal); color:#fff; box-shadow:0 2px 12px rgba(26,158,116,.28); }
-    .btn-primary:hover { background:var(--teal-dark); transform:translateY(-2px); box-shadow:0 6px 20px rgba(26,158,116,.35); }
-    .btn-ghost-sm { background:transparent; color:var(--muted); border:1px solid var(--border); padding:.35rem .7rem; border-radius:8px; font-size:.76rem; cursor:pointer;}
-    .btn-ghost-sm:hover { color:var(--teal); border-color:var(--teal); background:var(--teal-light); }
-    .btn-ghost-sm.danger { color:var(--red); border-color:var(--red-light); background:var(--red-light); }
-    .btn-ghost-sm.danger:hover { color:#fff; border-color:var(--red); background:var(--red); }
-    .page { padding:2rem 2rem 3rem; }
-    .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:1.8rem; gap:1rem; animation: fadeUp .5s .25s both; }
-    .page-eyebrow { font-size:.7rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--teal); margin-bottom:.25rem; }
-    .page-title { font-family:'Syne',sans-serif; font-size:1.75rem; font-weight:800; line-height:1.15; letter-spacing:-.02em; margin-bottom:.25rem; }
-    .page-sub { font-size:.87rem; color:var(--muted); font-weight:300; }
+{% extends "base.html" %}
 
-    .group-selector { background: transparent; border: none; font-size: 0.78rem; color: var(--ink); font-weight: 500; outline: none; cursor: pointer; }
+{% block title %}Tasks — Taskly{% endblock %}
 
-    .main-grid { display:grid; grid-template-columns:300px 1fr; gap:1.4rem; align-items:start; }
-    .form-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; position:sticky; top:80px; animation: slideInLeft .55s .35s cubic-bezier(.22,1,.36,1) both; transition: box-shadow .25s; }
-    .form-card-header { padding:1.2rem 1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:.8rem; }
-    .form-card-header h2 { font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; }
-    .form-card-header p { font-size:.78rem; color:var(--muted); margin-top:.15rem; }
-    .form-body { padding:1rem; display:flex; flex-direction:column; gap:.8rem; }
-    .field { display:flex; flex-direction:column; gap:.28rem; }
-    .field label { font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); transition:color .2s; }
-    .field input, .field select, .field textarea { padding:.6rem .8rem; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:'DM Sans',sans-serif; font-size:.85rem; color:var(--ink); background:var(--paper); outline:none; width:100%; }
-    .field input:focus, .field select:focus, .field textarea:focus { border-color:var(--teal); background:var(--white); box-shadow:0 0 0 3px var(--teal-light); }
-    .field textarea { min-height: 80px; resize: vertical; }
-    .btn-save { width:auto; padding: 0.5rem 1rem; margin-top: 0.5rem; background:var(--teal); color:#fff; border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-weight:600; font-size:.85rem; cursor:pointer; transition:all .22s; box-shadow:0 2px 12px rgba(26,158,116,.28); display:flex; align-items:center; justify-content:center; gap:.45rem; }
-    .btn-save:hover { background:var(--teal-dark); transform:translateY(-2px); box-shadow:0 7px 22px rgba(26,158,116,.38); }
-    .lists-col { display:flex; flex-direction:column; gap:1.3rem; }
-    .task-panel { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; animation:slideInRight .55s .4s cubic-bezier(.22,1,.36,1) both; }
-    .task-panel-header { padding:1.1rem 1.4rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:.8rem; }
-    .task-panel-title { display:flex; align-items:center; gap:.55rem; }
-    .task-panel-icon { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--teal-light); color:var(--teal); }
-    .task-panel-name { font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; }
-    .task-count { background:var(--paper); border:1px solid var(--border); font-size:.7rem; font-weight:700; color:var(--muted); padding:.15rem .5rem; border-radius:50px; }
-    .task-list { padding:.6rem .8rem; display:flex; flex-direction:column; gap:.45rem; }
+{% block breadcrumb %}Tasks{% endblock %}
 
-    .task-card { border:1px solid var(--border); border-radius:var(--radius-sm); padding:1rem; background:var(--white); transition:transform .22s, box-shadow .22s, border-color .22s; position:relative; overflow:hidden; }
-    .task-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; border-radius:3px 0 0 3px; }
-    .task-card.status-pending::before { background:var(--amber); }
-    .task-card.status-ongoing::before { background:var(--blue); }
-    .task-card.status-completed::before { background:var(--teal); }
+{% block extra_css %}
+<style>
+  /* 3-Column Side-by-Side Layout */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+    height: calc(100vh - 160px); /* Locks the height to the screen */
+  }
 
-    .task-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:.6rem; margin-bottom: 0.5rem; }
-    .task-card-title { font-family: 'Syne', sans-serif; font-weight:700; font-size:1.1rem; line-height:1.2; margin-bottom:.2rem; color: var(--ink); }
-    .task-card.status-completed .task-card-title { text-decoration:line-through; opacity:.6; }
+  /* The sticky form */
+  .form-card {
+    background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow-sm); overflow: hidden;
+    max-height: 100%; overflow-y: auto;
+  }
 
-    .task-desc { font-size:.85rem; color:var(--muted); line-height:1.5; margin-bottom: 0.8rem; }
+  .form-card-header { padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--paper); }
+  .form-card-header h2 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; margin: 0; }
+  .form-card-header p { font-size: .78rem; color: var(--muted); margin: .15rem 0 0 0; }
+  .form-body { padding: 1rem; display: flex; flex-direction: column; gap: .8rem; }
+  .field { display: flex; flex-direction: column; gap: .28rem; }
+  .field label { font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .field input, .field select, .field textarea { padding: .6rem .8rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: .85rem; background: var(--paper); outline: none; width: 100%; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--teal); background: var(--white); }
+  .field textarea { min-height: 80px; resize: vertical; }
+  .btn-save { padding: 0.6rem 1.2rem; background: var(--teal); color: #fff; border: none; border-radius: 8px; font-weight: 600; font-size: .85rem; cursor: pointer; transition: all .2s; }
+  .btn-save:hover { background: var(--teal-dark); transform: translateY(-2px); }
 
-    .task-card-meta { display:flex; align-items:center; gap:.8rem; flex-wrap:wrap; margin-bottom:.8rem; padding-bottom: 0.8rem; border-bottom: 1px dashed var(--border); }
-    .task-cat { font-size:.7rem; font-weight:700; padding:.2rem .6rem; border-radius:50px; background:var(--paper); border:1px solid var(--border); color:var(--muted); }
-    .task-deadline { font-size:.75rem; color:var(--ink-soft); font-weight: 500; display:flex; align-items:center; gap: 0.3rem;}
-    .task-deadline.overdue { color:var(--red); font-weight: 700; }
+  /* Task Panels */
+  .task-panel {
+    background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+    display: flex; flex-direction: column; max-height: 100%; overflow: hidden;
+  }
+  .task-panel-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--paper); }
+  .task-panel-title { display: flex; align-items: center; gap: .5rem; font-family: 'Syne', sans-serif; font-weight: 700; }
+  .task-count { background: var(--white); border: 1px solid var(--border); font-size: .7rem; padding: .15rem .5rem; border-radius: 50px; }
 
-    .task-assignee { font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 0.4rem;}
+  /* Internal Scrolling for the Lists */
+  .task-list {
+    padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;
+    overflow-y: auto; flex-grow: 1;
+  }
+  /* Custom Scrollbar for neatness */
+  .task-list::-webkit-scrollbar { width: 6px; }
+  .task-list::-webkit-scrollbar-track { background: transparent; }
+  .task-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+  .task-list::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
 
-    .status-badge { display:inline-flex; align-items:center; gap:.3rem; font-size:.7rem; font-weight:700; padding:.2rem .6rem; border-radius:50px; flex-shrink:0; text-transform: uppercase; letter-spacing: 0.05em;}
-    .status-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-    .badge-pending { background:var(--amber-light); color:#a06000; }
-    .badge-pending .status-dot { background:var(--amber); }
-    .badge-ongoing { background:var(--blue-light); color:var(--blue); }
-    .badge-ongoing .status-dot { background:var(--blue); }
-    .badge-completed { background:var(--teal-light); color:var(--teal-dark); }
-    .badge-completed .status-dot { background:var(--teal); }
+  /* Task Cards */
+  .task-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; background: var(--white); border-left: 4px solid var(--border); word-wrap: break-word; }
+  .task-card.status-pending { border-left-color: var(--amber); }
+  .task-card.status-ongoing { border-left-color: var(--blue); }
+  .task-card.status-completed { border-left-color: var(--teal); opacity: 0.7; background: var(--paper); }
 
-    .task-card-actions { display:flex; gap:.5rem; align-items: center; justify-content: space-between; }
+  .task-card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.05rem; margin-bottom: .2rem; }
+  .task-desc { font-size: .85rem; color: var(--muted); line-height: 1.4; margin-bottom: 0.8rem; }
 
-    .flash-stack { display:flex; flex-direction:column; gap:.5rem; margin-bottom:1rem; }
-    .flash { padding: 0.7rem 1rem; border-radius: var(--radius-sm); font-size: 0.83rem; font-weight: 500; border: 1px solid; animation: fadeUp 0.3s ease; }
-    .flash-error   { background: #fff2f0; border-color: #ffd3cc; color: #991414; }
-    .flash-success { background: #f0fdf6; border-color: #c6f0da; color: #166534; }
-    .flash-warning { background: #fff4e0; border-color: #ffe0b2; color: #a05c00; }
-    @media (max-width:980px) { .sidebar { transform:translateX(-100%); } .layout { margin-left:0; } .main-grid { grid-template-columns:1fr; } .form-card { position:static; } }
+  .manual-entry { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; background: var(--paper); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border); flex-direction: column; align-items: stretch;}
+  .btn-ghost-sm { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: .35rem .7rem; border-radius: 8px; font-size: .76rem; cursor: pointer; }
+  .btn-ghost-sm:hover { color: var(--teal); border-color: var(--teal); background: var(--teal-light); }
+  .btn-ghost-sm.danger:hover { color: #fff; border-color: var(--red); background: var(--red); }
 
-    /* For manual entry */
-    .manual-entry { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; background: var(--paper); padding: 0.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border); }
-    .manual-entry input { width: 80px; padding: 0.3rem 0.5rem; border-radius: 4px; border: 1px solid var(--border); font-size: 0.8rem; }
-    .manual-entry textarea { width: 100%; min-height: 40px; font-size: 0.8rem; padding: 0.3rem; border: 1px solid var(--border); border-radius: 4px; }
+  @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr 1fr; height: auto; } .form-card { grid-column: span 2; max-height: none; } }
+  @media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } .form-card { grid-column: span 1; } }
+</style>
+{% endblock %}
 
-    .red-dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--red); margin-left:0.5rem; box-shadow: 0 0 0 3px var(--red-light); animation:pulse 2s infinite ease-in-out;}
-  </style>
-</head>
-<body>
-
-<aside class="sidebar">
-  <a href="{{ url_for('index') }}" class="sidebar-logo">
-    <div class="sidebar-logo-icon"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><polyline points="4,10 8,14 16,6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <span class="sidebar-logo-text">Task<span>ly</span></span>
-  </a>
-
-  <nav class="sidebar-nav">
-    <div class="sidebar-section-label">Overview</div>
-    <a href="{{ url_for('dashboard') }}" class="sidebar-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Dashboard
-    </a>
-    <div class="sidebar-section-label">Work</div>
-    <a href="{{ url_for('tasks') }}" class="sidebar-link active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-      Tasks <span class="sidebar-badge">{{ tasks|length }}</span>
-    </a>
-    <a href="{{ url_for('groups') }}" class="sidebar-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      Groups
-    </a>
-    <div class="sidebar-section-label">Account</div>
-    <a href="{{ url_for('logout') }}" class="sidebar-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Logout
-    </a>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="sidebar-user">
-      <div class="sidebar-user-avatar">{{ current_user.username[:2]|upper }}</div>
-      <div>
-        <div class="user-name">{{ current_user.username }}</div>
-        <div class="user-role">User</div>
-      </div>
-    </div>
+{% block content %}
+<div class="page-header" style="margin-bottom: 1.5rem;">
+  <div>
+    <h1 class="page-title">Assign & Track Tasks</h1>
+    <p class="page-sub">Manage your active project workflow side-by-side.</p>
   </div>
-</aside>
-
-<div class="layout">
-  <header class="topbar">
-    <div class="topbar-breadcrumb">
-      <span>Taskly</span><span>/</span><strong>Tasks</strong>
-
-      {% if current_user.groups %}
-      <span class="topbar-sep" style="margin-left: 1rem;">|</span>
-      <form action="{{ url_for('switch_group', group_id=0) }}" method="POST" style="display:inline; margin-left: 1rem;" id="group-switch-form">
-        <select class="group-selector" name="group_id" onchange="document.getElementById('group-switch-form').action='{{ url_for('switch_group', group_id=0) }}'.replace('0', this.value); this.form.submit();">
-          {% for g in current_user.groups %}
-            <option value="{{ g.id }}" {% if g.id == current_user.current_group_id %}selected{% endif %}>
-              {{ g.name }}
-            </option>
-          {% endfor %}
-        </select>
-      </form>
-      {% endif %}
-    </div>
-  </header>
-
-  <main class="page">
-    <div class="page-header">
-      <div>
-        <div class="page-eyebrow">Task management</div>
-        <h1 class="page-title">Assign, track &amp; complete</h1>
-        <p class="page-sub">Manage tasks for your current active project.</p>
-      </div>
-    </div>
-
-    <div id="flash-container" class="flash-stack">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="flash flash-{{ category }}">{{ message }}</div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-    </div>
-
-    <div class="main-grid">
-      <div class="form-card">
-        <div class="form-card-header">
-          <div>
-            <h2 style="font-size: 1.1rem; margin-bottom: 0.2rem;">Create a task</h2>
-            <p>Add a new task to your active project.</p>
-          </div>
-        </div>
-        <form id="task-form" action="{{ url_for('create_task') }}" method="POST">
-          <div class="form-body">
-            <div class="field">
-              <label for="title">Task Title</label>
-              <input id="title" name="title" required placeholder="What needs to be done?"/>
-            </div>
-            <div class="field">
-              <label for="description">Task Description</label>
-              <textarea id="description" name="description" placeholder="Provide more details or acceptance criteria..."></textarea>
-            </div>
-
-            <div class="field">
-              <label for="deadline">Deadline</label>
-              <input id="deadline" name="deadline" type="date"/>
-            </div>
-
-            <!-- Simple non-coding mode checkbox -->
-            <div class="field" style="flex-direction:row; align-items:center; gap:0.5rem; margin-top:0.5rem;">
-                <input type="checkbox" id="is_non_coding" name="is_non_coding" style="width:16px; height:16px; min-height:0; cursor:pointer;" onchange="document.getElementById('complexity_div').style.display = this.checked ? 'none' : 'flex';"/>
-                <label for="is_non_coding" style="font-weight:600; cursor:pointer; margin-bottom:0;">Non-Coding Task (Hide code sizing)</label>
-            </div>
-
-            <div class="field" id="complexity_div" style="margin-top:0.5rem;">
-                <label for="complexity_size">Complexity / Target Size (Coding)</label>
-                <select id="complexity_size" name="complexity_size">
-                  <option value="XS">XS (25 units)</option>
-                  <option value="S">S (100 units)</option>
-                  <option value="M" selected>M (300 units)</option>
-                  <option value="L">L (700 units)</option>
-                  <option value="XL">XL (1500 units)</option>
-                </select>
-            </div>
-            <div class="field">
-              <label for="assignee_id">Assign to</label>
-              <select id="assignee_id" name="assignee_id" required>
-                <option value="">— select member —</option>
-                {% for member in team_members %}
-                  <option value="{{ member.id }}">{{ member.username }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div style="display:flex; justify-content: flex-start;">
-              <button class="btn-save" type="submit" style="width: auto; padding: 0.6rem 1.2rem;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                Save Task
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-
-      <div class="lists-col">
-        <div class="task-panel">
-          <div class="task-panel-header">
-            <div class="task-panel-title">
-              <div class="task-panel-icon icon-personal">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-              </div>
-              <span class="task-panel-name">Project Tasks</span>
-              <span class="task-count">{{ tasks|length }}</span>
-            </div>
-          </div>
-          <div class="task-list">
-            {% for task in tasks %}
-            <div class="task-card status-{% if task.status_color == 'bg-success' %}completed{% elif task.status_color == 'bg-warning' %}ongoing{% else %}pending{% endif %}">
-              <div class="task-card-top">
-                <div class="task-card-left">
-                  <div class="task-card-title">
-                    {{ task.title }}
-                    {% if task.feedback_unread %}
-                    <form action="{{ url_for('mark_read', task_id=task.id) }}" method="POST" style="display:inline; margin-left: 0.5rem;">
-                        <button type="submit" style="background:none;border:none;cursor:pointer;" title="Mark as read"><span class="red-dot"></span></button>
-                    </form>
-                    {% endif %}
-                  </div>
-
-                  <div class="task-desc">{{ task.description or "No description provided." }}</div>
-
-                  <div class="task-card-meta">
-                    {% if not task.is_non_coding %}
-                    <span class="task-cat">{{ task.complexity_size }}</span>
-                    {% endif %}
-
-                    {% if task.deadline %}
-                      {% set delta = (task.deadline - today).days %}
-                      <span class="task-deadline {% if delta < 0 and task.status_color != 'bg-success' %}overdue{% endif %}" title="{{ task.deadline.strftime('%b %d, %Y') }}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        {% if delta < 0 %}
-                          Overdue ({{ delta|abs }} days)
-                        {% elif delta == 0 %}
-                          Due Today
-                        {% else %}
-                          {{ delta }} days remaining
-                        {% endif %}
-                      </span>
-                    {% endif %}
-
-                    <span class="task-assignee">
-                      <div class="sidebar-user-avatar" style="width:20px;height:20px;font-size:0.55rem;background:var(--teal);border:none;">
-                        {{ task.assignee.username[:2]|upper if task.assignee else '?' }}
-                      </div>
-                      {{ task.assignee.username if task.assignee else 'Unassigned' }}
-                    </span>
-                  </div>
-
-                  {% if task.feedback %}
-                  <div class="task-desc" style="background:var(--paper); padding: 0.6rem; border-radius: var(--radius-sm); border-left: 2px solid var(--teal);">
-                    <strong>Feedback/Notes:</strong><br/>
-                    {{ task.feedback }}
-                  </div>
-                  {% endif %}
-
-                </div>
-                <span class="status-badge badge-{% if task.status_color == 'bg-success' %}completed{% elif task.status_color == 'bg-warning' %}ongoing{% else %}pending{% endif %}">
-                  <span class="status-dot"></span>{% if task.status_color == 'bg-success' %}Completed{% elif task.status_color == 'bg-warning' %}Ongoing{% else %}Pending{% endif %}
-                </span>
-              </div>
-
-              <div class="task-card-actions">
-                <form action="{{ url_for('sync_task', task_id=task.id) }}" method="POST" style="flex:1;">
-                  <div class="manual-entry" style="display:flex; flex-direction:column; align-items:flex-start;">
-                    {% if task.is_non_coding %}
-                        <!-- Simple Checkmark for non-coding task completion -->
-                        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom: 0.5rem; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--white); width: 100%;">
-                            <input type="checkbox" name="is_completed" {% if task.is_completed %}checked{% endif %} style="width: 18px; height: 18px; cursor:pointer;" />
-                            <label style="font-size:0.8rem; font-weight:600; cursor:pointer;">Mark as Completed</label>
-                        </div>
-                    {% else %}
-                        {% if not group.repo_url %}
-                          <div style="display:flex; flex-direction:row; align-items:center; gap:0.5rem; width:100%; margin-bottom:0.5rem;">
-                            <input type="number" name="manual_loc" placeholder="0" max="{{ task.target_loc }}" value="{{ task.actual_loc }}" style="width:80px;"/>
-                            <span style="font-size:0.8rem; font-weight:600; color:var(--muted);">/ {{ task.target_loc }} LoC</span>
-                          </div>
-                        {% else %}
-                          <div style="font-size:0.75rem; color:var(--teal); font-weight:600; min-width: 80px; margin-bottom:0.5rem;">{{ task.actual_loc }} / {{ task.target_loc }} LoC</div>
-                        {% endif %}
-                    {% endif %}
-
-                    <div style="display:flex; gap:0.5rem; width:100%;">
-                        <textarea name="feedback" placeholder="Add feedback or notes..." style="flex:1;">{{ task.feedback or '' }}</textarea>
-
-                        <button type="submit" class="btn-ghost-sm" style="background:var(--teal); color:white; padding: 0.5rem 1rem;">
-                          {% if not task.is_non_coding and group.repo_url %}Sync & Save{% else %}Update{% endif %}
-                        </button>
-                    </div>
-                  </div>
-                </form>
-
-                <form action="{{ url_for('delete_task', task_id=task.id) }}" method="POST" style="margin-left: 0.5rem; margin-top: 0.5rem;">
-                   <button type="submit" class="btn-ghost-sm danger" onclick="return confirm('Are you sure you want to delete this task?');">Delete</button>
-                </form>
-              </div>
-            </div>
-            {% else %}
-            <p style="text-align:center; padding: 2rem; color: var(--muted); font-size: 0.85rem;">No tasks found in your project.</p>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    </div>
-  </main>
 </div>
 
-</body>
-</html>
+<div class="main-grid">
+  <div class="form-card">
+    <div class="form-card-header">
+      <h2>Create a task</h2>
+      <p>Add to your active project.</p>
+    </div>
+    <form id="task-form" action="{{ url_for('create_task') }}" method="POST">
+      <div class="form-body">
+        <div class="field">
+          <label>Task Title</label>
+          <input name="title" required placeholder="What needs to be done?"/>
+        </div>
+        <div class="field">
+          <label>Description</label>
+          <textarea name="description" placeholder="Acceptance criteria..."></textarea>
+        </div>
+        <div class="field">
+          <label>Deadline</label>
+          <input name="deadline" type="date"/>
+        </div>
+        <div class="field" style="flex-direction:row; align-items:center; gap:0.5rem; margin-top:0.5rem;">
+            <input type="checkbox" id="is_non_coding" name="is_non_coding" style="width:16px; height:16px; cursor:pointer;" onchange="document.getElementById('complexity_div').style.display = this.checked ? 'none' : 'flex';"/>
+            <label for="is_non_coding" style="margin:0; cursor:pointer;">Non-Coding Task</label>
+        </div>
+        <div class="field" id="complexity_div">
+            <label>Complexity (Coding)</label>
+            <select name="complexity_size">
+              <option value="XS">XS (25 units)</option><option value="S">S (100 units)</option>
+              <option value="M" selected>M (300 units)</option><option value="L">L (700 units)</option>
+              <option value="XL">XL (1500 units)</option>
+            </select>
+        </div>
+        <div class="field">
+          <label>Assign to</label>
+          <select name="assignee_id" required>
+            <option value="">— select member —</option>
+            {% for member in team_members %}
+              <option value="{{ member.id }}">{{ member.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn-save" type="submit">Save Task</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="task-panel">
+    <div class="task-panel-header">
+      <div class="task-panel-title"><span>Active Tasks</span> <span class="task-count">{{ tasks|selectattr("status_color", "ne", "bg-success")|list|length }}</span></div>
+    </div>
+    <div class="task-list">
+      {% for task in tasks %}
+        {% if task.status_color != 'bg-success' %}
+          <div class="task-card status-{% if task.status_color == 'bg-warning' %}ongoing{% else %}pending{% endif %}">
+            <div class="task-card-title">{{ task.title }}</div>
+            <div class="task-desc">{{ task.description or "No description provided." }}</div>
+
+            <form action="{{ url_for('sync_task', task_id=task.id) }}" method="POST">
+              <div class="manual-entry">
+                {% if task.is_non_coding %}
+                    <label><input type="checkbox" name="is_completed" {% if task.is_completed %}checked{% endif %} /> Mark Completed</label>
+                {% else %}
+                    {% if not group.repo_url %}
+                      <div><input type="number" name="manual_loc" max="{{ task.target_loc }}" value="{{ task.actual_loc }}" style="width:60px; padding:0.2rem;"/> / {{ task.target_loc }} LoC</div>
+                    {% else %}
+                      <div style="font-size:0.8rem; font-weight:bold; color:var(--teal);">{{ task.actual_loc }} / {{ task.target_loc }} LoC via GitHub</div>
+                    {% endif %}
+                {% endif %}
+                <textarea name="feedback" placeholder="Notes..." style="width:100%; min-height:40px; padding:0.4rem;">{{ task.feedback or '' }}</textarea>
+                <div style="display:flex; justify-content:space-between; width:100%; margin-top:0.5rem;">
+                   <button type="submit" class="btn-save" style="padding:0.3rem 0.8rem; font-size:0.8rem;">Sync / Update</button>
+                   <button type="submit" form="del-{{ task.id }}" class="btn-ghost-sm danger">Delete</button>
+                </div>
+              </div>
+            </form>
+            <form id="del-{{ task.id }}" action="{{ url_for('delete_task', task_id=task.id) }}" method="POST"></form>
+          </div>
+        {% endif %}
+      {% else %}
+        <p style="text-align:center; color: var(--muted); font-size: 0.85rem; margin-top: 2rem;">No active tasks.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="task-panel">
+    <div class="task-panel-header">
+      <div class="task-panel-title"><span>Completed Tasks</span> <span class="task-count">{{ tasks|selectattr("status_color", "equalto", "bg-success")|list|length }}</span></div>
+    </div>
+    <div class="task-list">
+      {% for task in tasks %}
+        {% if task.status_color == 'bg-success' %}
+          <div class="task-card status-completed">
+            <div class="task-card-title" style="text-decoration:line-through;">{{ task.title }}</div>
+            <div class="task-desc">Completed by {{ task.assignee.username if task.assignee else 'Unknown' }}</div>
+            <form action="{{ url_for('delete_task', task_id=task.id) }}" method="POST" style="text-align: right;">
+               <button type="submit" class="btn-ghost-sm danger" onclick="return confirm('Delete task?');">Delete</button>
+            </form>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

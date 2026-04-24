@@ -1,122 +1,242 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPMS Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
+{% extends "base.html" %}
 
-    <!-- Header -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">GPMS Dashboard</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
-                    </li>
-                </ul>
-            </div>
+{% block title %}Dashboard — Taskly{% endblock %}
+
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+<section class="dash-hero">
+  <div class="hero-orb-1"></div>
+  <div class="hero-orb-2"></div>
+  <div class="dash-hero-inner">
+    <div>
+      <div class="hero-eyebrow">Project Overview</div>
+      <h1>{{ group.name if group else 'No Active Project' }}</h1>
+      <p>Track group momentum, personal work, and the next upcoming deadlines from one place.</p>
+      <div class="hero-stats-row">
+        <div class="hero-stat">
+          <div class="hero-stat-num accent">{{ tasks|length }}</div>
+          <div class="hero-stat-label">Total tasks</div>
         </div>
-    </nav>
-
-    <div class="container mt-4">
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <!-- Group Info -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3>Group: {{ group.name }}</h3>
-            </div>
-            <div class="card-body">
-                <p><strong>Invite Code:</strong> <code>{{ group.invite_code }}</code></p>
-                <p><strong>Repo URL:</strong> <a href="{{ group.repo_url }}">{{ group.repo_url }}</a></p>
-                <h5>Team Members:</h5>
-                <ul>
-                    {% for member in team_members %}
-                        <li>{{ member.username }}</li>
-                    {% endfor %}
-                </ul>
-                <div class="progress">
-                    <div class="progress-bar" role="progressbar" style="width: {{ group_completion_rate }}%;" aria-valuenow="{{ group_completion_rate }}" aria-valuemin="0" aria-valuemax="100">
-                        {{ "%.2f"|format(group_completion_rate|float) }}%
-                    </div>
-                </div>
-            </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">{{ tasks|selectattr("status_color", "equalto", "bg-success")|list|length }}</div>
+          <div class="hero-stat-label">Completed</div>
         </div>
-
-        <!-- Task Creation Form -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h4>Create New Task</h4>
-            </div>
-            <div class="card-body">
-                <form action="{{ url_for('create_task') }}" method="POST">
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <input type="text" class="form-control" name="title" placeholder="Task Title" required>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <select class="form-select" name="complexity_size" required>
-                                <option value="XS">XS</option>
-                                <option value="S">S</option>
-                                <option value="M">M</option>
-                                <option value="L">L</option>
-                                <option value="XL">XL</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <select class="form-select" name="assignee_id" required>
-                                {% for member in team_members %}
-                                    <option value="{{ member.id }}">{{ member.username }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-2 mb-3">
-                            <button type="submit" class="btn btn-primary w-100">Create</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num gold">{{ tasks|selectattr("status_color", "equalto", "bg-danger")|list|length }}</div>
+          <div class="hero-stat-label">Urgent tasks</div>
         </div>
-
-        <!-- Task Board -->
-        <h2>My Team's Tasks</h2>
-        <div class="row">
-            {% for task in tasks %}
-            <div class="col-md-4">
-                <div class="card text-white mb-3 {{ task.status_color }}">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        {{ task.title }}
-                        <span class="badge bg-light text-dark">{{ task.assignee.username }}</span>
-                    </div>
-                    <div class="card-body">
-                        <p>Target: {{ task.target_loc }} LoC</p>
-                        <p>Actual: {{ task.actual_loc }} LoC</p>
-                    </div>
-                    <div class="card-footer">
-                        <form action="{{ url_for('sync_task', task_id=task.id) }}" method="POST" class="d-grid">
-                            <button type="submit" class="btn btn-sm btn-light">Sync Progress</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
+        <div class="hero-stat">
+          <div class="hero-stat-num">{{ team_members|length }}</div>
+          <div class="hero-stat-label">Team Members</div>
         </div>
+      </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    {% if group %}
+    <div class="focus-card">
+      <div class="focus-label">Highlighted Reminder</div>
+      {% if highlighted_reminder %}
+      <div class="focus-task">{{ highlighted_reminder.title }}</div>
+      <div class="focus-meta">{{ highlighted_reminder.description }}</div>
+
+      {% set delta = (highlighted_reminder.deadline - today).days if highlighted_reminder.deadline else 0 %}
+      <div class="focus-pct" style="color:var(--gold-light); font-weight:700;">
+        {% if highlighted_reminder.deadline %}
+          {% if delta < 0 %}
+            Overdue by {{ delta|abs }} days
+          {% elif delta == 0 %}
+            Happening Today
+          {% else %}
+            {{ delta }} days remaining
+          {% endif %}
+        {% else %}
+          No date set
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="focus-task">No Reminders</div>
+      <div class="focus-meta">You're all caught up!</div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- QUICK ACTIONS -->
+<div class="section-head reveal d1">
+  <div>
+    <div class="section-eyebrow">Action center</div>
+    <div class="section-title">Move the work forward</div>
+  </div>
+</div>
+<div class="action-grid">
+  <a href="{{ url_for('tasks') }}" class="action-card reveal d1">
+    <div class="action-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+    <div class="action-title">New Task</div>
+    <div class="action-desc">Create and assign a task to your team</div>
+  </a>
+  <a href="{{ url_for('groups') }}" class="action-card reveal d2">
+    <div class="action-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/></svg></div>
+    <div class="action-title">Groups</div>
+    <div class="action-desc">Join or create a new project group</div>
+  </a>
+
+  <!-- Inline Reminder Form -->
+  <div class="action-card reveal d3" style="grid-column: span 2; display: flex; flex-direction: row; gap: 1rem; align-items: flex-start; cursor: default;">
+      <div style="flex: 1;">
+          <div class="action-title" style="margin-bottom:0.5rem; color: var(--gold);">Create Reminder / Important Date</div>
+          <form action="{{ url_for('create_task') }}" method="POST" style="display:flex; flex-direction:column;">
+              <input type="hidden" name="is_reminder" value="on">
+              <input type="hidden" name="complexity_size" value="S"> <!-- dummy -->
+              <div class="field" style="margin-bottom: 0.4rem;">
+                  <input type="text" name="title" required placeholder="Event title..." style="padding:0.4rem; font-size:0.8rem;" />
+              </div>
+              <div style="display:flex; gap:0.5rem;">
+                  <div class="field" style="flex:2; margin-bottom: 0;">
+                      <input type="text" name="description" placeholder="Description..." style="padding:0.4rem; font-size:0.8rem;" />
+                  </div>
+                  <div class="field" style="flex:1; margin-bottom: 0;">
+                      <input type="date" name="deadline" required style="padding:0.4rem; font-size:0.8rem;" />
+                  </div>
+                  <button type="submit" class="btn-save" style="margin: 0; width: auto; padding: 0.4rem 1rem; background: var(--gold); border-radius:4px;">Add</button>
+              </div>
+          </form>
+      </div>
+  </div>
+</div>
+
+<!-- METRICS -->
+{% if not group.is_non_coding %}
+<div class="section-head reveal d2">
+  <div>
+    <div class="section-eyebrow">Code Performance</div>
+    <div class="section-title">Read the room quickly</div>
+  </div>
+</div>
+<div class="metrics-grid">
+  <div class="metric-card accent-card reveal d1">
+    <div class="metric-label">Completion rate</div>
+    <div class="metric-num">{{ "%.1f"|format(group_completion_rate) }}%</div>
+    <div class="metric-sub">
+      <span class="metric-badge badge-accent">Total Health</span>
+    </div>
+    <div class="metric-bar"><div class="metric-bar-fill fill-accent" style="width:{{ group_completion_rate }}%"></div></div>
+  </div>
+  <div class="metric-card reveal d2">
+    <div class="metric-label">Tasks in progress</div>
+    <div class="metric-num">{{ tasks_in_progress }}</div>
+    <div class="metric-sub">
+      <span class="metric-badge badge-warn">Ongoing</span>
+    </div>
+    <div class="metric-bar"><div class="metric-bar-fill fill-blue" style="width:{{ (tasks_in_progress / tasks|length * 100) if tasks|length > 0 else 0 }}%"></div></div>
+  </div>
+  <div class="metric-card reveal d3">
+    <div class="metric-label">Urgent Tasks</div>
+    <div class="metric-num">{{ tasks|selectattr("status_color", "equalto", "bg-danger")|list|length }}</div>
+    <div class="metric-sub">
+      <span class="metric-badge badge-up" style="background:#ffe9e9;color:#991414;">Needs Action</span>
+    </div>
+    <div class="metric-bar"><div class="metric-bar-fill fill-green" style="background:#991414;width:{{ (tasks|selectattr("status_color", "equalto", "bg-danger")|list|length / tasks|length * 100) if tasks|length > 0 else 0 }}%"></div></div>
+  </div>
+  <div class="metric-card reveal d4">
+    <div class="metric-label">Completed Tasks</div>
+    <div class="metric-num">{{ tasks|selectattr("status_color", "equalto", "bg-success")|list|length }}</div>
+    <div class="metric-sub">Done</div>
+    <div class="metric-bar"><div class="metric-bar-fill fill-gold" style="width:{{ (tasks|selectattr("status_color", "equalto", "bg-success")|list|length / tasks|length * 100) if tasks|length > 0 else 0 }}%"></div></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="two-col">
+  <!-- Reminders -->
+  <div class="panel reveal d4">
+    <div class="panel-head">
+      <div class="panel-title">Important Dates & Reminders</div>
+    </div>
+    <div>
+      {% for r in reminders %}
+      <div class="reminder-item">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div class="reminder-title">{{ r.title }}</div>
+
+              <div style="display:flex; gap:0.5rem; align-items:center;">
+                  <form action="{{ url_for('highlight_reminder', task_id=r.id) }}" method="POST">
+                      <button type="submit" style="background:none; border:none; color:var(--{% if r.is_highlighted %}gold{% else %}muted{% endif %}); cursor:pointer; font-size:0.75rem;">
+                          {% if r.is_highlighted %}★ Highlighted{% else %}☆ Highlight{% endif %}
+                      </button>
+                  </form>
+                  <form action="{{ url_for('delete_task', task_id=r.id) }}" method="POST">
+                      <button type="submit" style="background:none; border:none; color:var(--red); cursor:pointer;" onclick="return confirm('Delete reminder?');">&times;</button>
+                  </form>
+              </div>
+          </div>
+          <div class="reminder-desc">{{ r.description }}</div>
+          {% if r.deadline %}
+            {% set delta = (r.deadline - today).days %}
+            <div class="reminder-date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              {{ r.deadline.strftime('%b %d, %Y') }}
+              <span style="color:var(--ink-soft); margin-left:0.5rem; font-size:0.65rem;">
+              {% if delta < 0 %}(Overdue by {{ delta|abs }} days){% elif delta == 0 %}(Today!){% else %}(In {{ delta }} days){% endif %}
+              </span>
+            </div>
+          {% endif %}
+      </div>
+      {% else %}
+      <p style="color:var(--muted);font-size:0.85rem;">No upcoming important dates.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Group progress / Recent Tasks -->
+  <div style="display:flex; flex-direction:column; gap:0.75rem;">
+    <div class="panel reveal d4">
+      <div class="panel-head">
+        <div class="panel-title">Recent Tasks</div>
+        <a href="{{ url_for('tasks') }}" class="panel-action">Manage →</a>
+      </div>
+      <div class="task-list">
+        {% for task in tasks[:3] %}
+        <div class="task-item" style="opacity:1;">
+          <div class="task-check {% if task.status_color == 'bg-success' %}done{% endif %}"></div>
+
+          <div style="display:flex; flex-direction:column; flex:1; gap:0.2rem;">
+              <span class="task-name {% if task.status_color == 'bg-success' %}done{% endif %}">{{ task.title }}</span>
+              <span style="font-size:0.7rem; color:var(--muted);">Assignee: {{ task.assignee.username if task.assignee else 'Unassigned' }}</span>
+          </div>
+
+          {% if not task.is_non_coding %}
+            <span class="due-badge">{{ task.actual_loc }} / {{ task.target_loc }} LoC</span>
+          {% endif %}
+        </div>
+        {% else %}
+        <p style="color:var(--muted);font-size:0.85rem;">No tasks found.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel reveal d5">
+      <div class="panel-head">
+        <div class="panel-title">Project Members</div>
+        <a href="{{ url_for('groups') }}" class="panel-action">Open →</a>
+      </div>
+      <div class="group-list">
+        {% if group %}
+          {% for member in team_members %}
+          <div class="group-item" style="opacity:1;">
+            <div class="group-item-top">
+              <div class="group-av" style="background:var(--teal)">{{ member.username[:2]|upper }}</div>
+              <span class="group-name">{{ member.username }} <span class="badge bg-secondary" style="font-size: 0.6rem; margin-left: 0.3rem;">{{ member.group_role }}</span></span>
+              <span class="group-count"><em>{{ member.github_username or 'No GitHub' }}</em></span>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+        <p style="color:var(--muted);font-size:0.85rem;">You are not in a project yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
