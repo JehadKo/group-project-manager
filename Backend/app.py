@@ -16,7 +16,6 @@ load_dotenv()
 database_url = os.environ.get('DATABASE_URL')
 
 app = Flask(__name__, template_folder='template', static_folder='static')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gpms.db'
 app.config['SECRET_KEY'] = 'a_very_secure_and_production_ready_secret_key'
 db = SQLAlchemy(app)
 if database_url:
