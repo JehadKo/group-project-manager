@@ -13,21 +13,28 @@ from datetime import datetime, date
 load_dotenv()
 
 # --- APP INITIALIZATION ---
-database_url = os.environ.get('DATABASE_URL')
 
 app = Flask(__name__, template_folder='template', static_folder='static')
+db_url = os.environ.get('DATABASE_URL')
 app.config['SECRET_KEY'] = 'a_very_secure_and_production_ready_secret_key'
-db = SQLAlchemy(app)
-if database_url:
-    # Fix for Render/Heroku: they often use 'postgres://',
-    # but SQLAlchemy requires 'postgresql://'
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+if db_url:
+    print(f"DATABASE_URL found! Starts with: {db_url[:15]}...")
 else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gpms.db'
+    print("DATABASE_URL NOT FOUND in environment variables!")
+
+# 3. Handle the Postgres prefix and the crash prevention
+if db_url:
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+else:
+    # If all else fails, use SQLite so the app at least starts
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'gpms.db')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
 # --- MODELS ---
 
 # Association table for Many-to-Many relationship between User and Group
