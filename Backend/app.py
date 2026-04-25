@@ -13,11 +13,22 @@ from datetime import datetime, date
 load_dotenv()
 
 # --- APP INITIALIZATION ---
+database_url = os.environ.get('DATABASE_URL')
+
 app = Flask(__name__, template_folder='template', static_folder='static')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gpms.db'
 app.config['SECRET_KEY'] = 'a_very_secure_and_production_ready_secret_key'
 db = SQLAlchemy(app)
+if database_url:
+    # Fix for Render/Heroku: they often use 'postgres://',
+    # but SQLAlchemy requires 'postgresql://'
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gpms.db'
 
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # --- MODELS ---
 
 # Association table for Many-to-Many relationship between User and Group
@@ -822,6 +833,9 @@ def leave_group(group_id):
     return redirect(url_for('groups'))
 
 # --- MAIN EXECUTION ---
+with app.app_context():
+    db.create_all()
+    print("Database tables created in Neon!")
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
