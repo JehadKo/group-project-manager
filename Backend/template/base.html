@@ -236,7 +236,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
       Dashboard
     </a>
-    <a href="{{ url_for('tasks') }}" class="nav-item {% if request.endpoint == 'tasks' %}active{% endif %}">
+    <a href="{{ url_for('tasks_route') }}" class="nav-item {% if request.endpoint == 'tasks_route' %}active{% endif %}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-2 10h10l-9 10 2-10H3Z"/></svg>
       Tasks
     </a>

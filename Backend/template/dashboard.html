@@ -22,10 +22,12 @@
           <div class="hero-stat-num">{{ tasks|selectattr("status_color", "equalto", "bg-success")|list|length }}</div>
           <div class="hero-stat-label">Completed</div>
         </div>
+        {% if group and not group.is_non_coding %}
         <div class="hero-stat">
           <div class="hero-stat-num gold">{{ tasks|selectattr("status_color", "equalto", "bg-danger")|list|length }}</div>
           <div class="hero-stat-label">Urgent tasks</div>
         </div>
+        {% endif %}
         <div class="hero-stat">
           <div class="hero-stat-num">{{ team_members|length }}</div>
           <div class="hero-stat-label">Team Members</div>
@@ -71,7 +73,7 @@
   </div>
 </div>
 <div class="action-grid">
-  <a href="{{ url_for('tasks') }}" class="action-card reveal d1">
+  <a href="{{ url_for('tasks_route') }}" class="action-card reveal d1">
     <div class="action-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
     <div class="action-title">New Task</div>
     <div class="action-desc">Create and assign a task to your team</div>
@@ -107,10 +109,9 @@
 </div>
 
 <!-- METRICS -->
-{% if not group.is_non_coding %}
 <div class="section-head reveal d2">
   <div>
-    <div class="section-eyebrow">Code Performance</div>
+    <div class="section-eyebrow">Project Performance</div>
     <div class="section-title">Read the room quickly</div>
   </div>
 </div>
@@ -131,6 +132,8 @@
     </div>
     <div class="metric-bar"><div class="metric-bar-fill fill-blue" style="width:{{ (tasks_in_progress / tasks|length * 100) if tasks|length > 0 else 0 }}%"></div></div>
   </div>
+
+  {% if group and not group.is_non_coding %}
   <div class="metric-card reveal d3">
     <div class="metric-label">Urgent Tasks</div>
     <div class="metric-num">{{ tasks|selectattr("status_color", "equalto", "bg-danger")|list|length }}</div>
@@ -139,6 +142,8 @@
     </div>
     <div class="metric-bar"><div class="metric-bar-fill fill-green" style="background:#991414;width:{{ (tasks|selectattr("status_color", "equalto", "bg-danger")|list|length / tasks|length * 100) if tasks|length > 0 else 0 }}%"></div></div>
   </div>
+  {% endif %}
+
   <div class="metric-card reveal d4">
     <div class="metric-label">Completed Tasks</div>
     <div class="metric-num">{{ tasks|selectattr("status_color", "equalto", "bg-success")|list|length }}</div>
@@ -146,7 +151,6 @@
     <div class="metric-bar"><div class="metric-bar-fill fill-gold" style="width:{{ (tasks|selectattr("status_color", "equalto", "bg-success")|list|length / tasks|length * 100) if tasks|length > 0 else 0 }}%"></div></div>
   </div>
 </div>
-{% endif %}
 
 <div class="two-col">
   <!-- Reminders -->
@@ -194,7 +198,7 @@
     <div class="panel reveal d4">
       <div class="panel-head">
         <div class="panel-title">Recent Tasks</div>
-        <a href="{{ url_for('tasks') }}" class="panel-action">Manage →</a>
+        <a href="{{ url_for('tasks_route') }}" class="panel-action">Manage →</a>
       </div>
       <div class="task-list">
         {% for task in tasks[:3] %}
@@ -227,7 +231,15 @@
           <div class="group-item" style="opacity:1;">
             <div class="group-item-top">
               <div class="group-av" style="background:var(--teal)">{{ member.username[:2]|upper }}</div>
-              <span class="group-name">{{ member.username }} <span class="badge bg-secondary" style="font-size: 0.6rem; margin-left: 0.3rem;">{{ member.group_role }}</span></span>
+              <span class="group-name">{{ member.username }}
+                {% if group.leader_id == member.id %}
+                    <span class="badge bg-secondary" style="font-size: 0.6rem; margin-left: 0.3rem; background: var(--teal); color: white; padding: 0.1rem 0.4rem; border-radius: 4px;">Leader</span>
+                {% elif member in group.co_leaders %}
+                    <span class="badge bg-secondary" style="font-size: 0.6rem; margin-left: 0.3rem; background: var(--blue); color: white; padding: 0.1rem 0.4rem; border-radius: 4px;">Co-Leader</span>
+                {% else %}
+                    <span class="badge bg-secondary" style="font-size: 0.6rem; margin-left: 0.3rem; background: var(--paper); color: var(--muted); padding: 0.1rem 0.4rem; border-radius: 4px;">Member</span>
+                {% endif %}
+              </span>
               <span class="group-count"><em>{{ member.github_username or 'No GitHub' }}</em></span>
             </div>
           </div>

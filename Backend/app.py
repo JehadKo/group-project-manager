@@ -27,13 +27,19 @@ user_group_association = db.Table(
     db.Column('group_id', db.Integer, db.ForeignKey('group.id'), primary_key=True)
 )
 
+# Association table for Co-Leaders
+group_coleaders = db.Table(
+    'group_coleaders',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('group_id', db.Integer, db.ForeignKey('group.id'), primary_key=True)
+)
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
     github_username = db.Column(db.String(80), nullable=True)  # Added for GitHub API
-    group_role = db.Column(db.String(20), default='Member')
+    group_role = db.Column(db.String(20), default='Member') # Legacy fallback
 
     # Track the user's currently "active" or "viewed" group
     current_group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=True)
@@ -49,9 +55,12 @@ class Group(db.Model):
     invite_code = db.Column(db.String(6), unique=True, nullable=False)
     repo_url = db.Column(db.String(255), nullable=True)
     is_non_coding = db.Column(db.Boolean, default=False)  # Group level setting
+    leader_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # Adding leader_id for accurate role management
 
     users = db.relationship('User', secondary=user_group_association, back_populates='groups')
+    co_leaders = db.relationship('User', secondary=group_coleaders, backref='co_lead_groups')
     tasks = db.relationship('Task', backref='group', lazy=True, cascade="all, delete-orphan")
+    leader = db.relationship('User', foreign_keys=[leader_id])
 
 
 class Task(db.Model):
@@ -221,15 +230,24 @@ def get_active_group(user):
     db.session.commit()
     return user.groups[0]
 
+def get_user_role(user, group):
+    if not user or not group: return 'Member'
+    if group.leader_id == user.id: return 'Leader'
+    if user in group.co_leaders: return 'Co-Leader'
+    return 'Member'
 
 @app.context_processor
 def inject_global_vars():
     user = get_current_user()
+    group_role = 'Member'
     if user:
         user.is_authenticated = True
+        active_group = get_active_group(user)
+        if active_group:
+             group_role = get_user_role(user, active_group)
     else:
         user = type('AnonymousUser', (), {'is_authenticated': False, 'groups': []})()
-    return dict(current_user=user, today=date.today())
+    return dict(current_user=user, today=date.today(), current_role=group_role)
 
 
 @app.route('/')
@@ -324,8 +342,10 @@ def dashboard():
 
     all_tasks = active_group.tasks if active_group else []
     
+    current_role = get_user_role(user, active_group) if active_group else 'Member'
+
     # Filter visibility based on role
-    if user.group_role in ['Leader', 'Co-Leader']:
+    if current_role in ['Leader', 'Co-Leader']:
         filtered_tasks = all_tasks
     else:
         filtered_tasks = [t for t in all_tasks if t.assignee_id == user.id or t.is_reminder]
@@ -334,7 +354,7 @@ def dashboard():
     tasks = [t for t in filtered_tasks if not t.is_reminder]
     reminders = [t for t in filtered_tasks if t.is_reminder]
 
-    # Calculate tasks in progress based on status_color or LOC
+    # Calculate tasks in progress based on status_color
     tasks_in_progress = sum(1 for t in tasks if t.status_color != 'bg-success')
 
 
@@ -387,7 +407,7 @@ def dashboard():
 
 
 @app.route('/tasks')
-def tasks():
+def tasks_route():
     user = get_current_user()
     if not user:
         return redirect(url_for('login'))
@@ -395,13 +415,13 @@ def tasks():
     active_group = get_active_group(user)
     team_members = active_group.users if active_group else []
     # Only show actual tasks, not reminders
-    tasks = [t for t in active_group.tasks if not t.is_reminder] if active_group else []
+    tasks_list = [t for t in active_group.tasks if not t.is_reminder] if active_group else []
 
     return render_template('tasks.html',
                            current_user=user,
                            group=active_group,
                            team_members=team_members,
-                           tasks=tasks)
+                           tasks=tasks_list)
 
 
 @app.route('/groups')
@@ -483,13 +503,12 @@ def create_group():
     while Group.query.filter_by(invite_code=invite_code).first():
         invite_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
-    new_group = Group(name=group_name, invite_code=invite_code, repo_url=repo_url, is_non_coding=is_non_coding)
+    new_group = Group(name=group_name, invite_code=invite_code, repo_url=repo_url, is_non_coding=is_non_coding, leader_id=user.id)
     new_group.users.append(user)
     db.session.add(new_group)
     db.session.commit()
 
     user.current_group_id = new_group.id
-    user.group_role = 'Leader'
     db.session.commit()
 
     flash(f'Project "{group_name}" created! Invite code is {invite_code}', 'success')
@@ -514,7 +533,6 @@ def join_group():
     else:
         user.groups.append(group)
         user.current_group_id = group.id  # Set as active
-        user.group_role = 'Member'
         db.session.commit()
         flash(f'Successfully joined project "{group.name}"!', 'success')
 
@@ -527,25 +545,41 @@ def promote(member_id):
     if not user:
         return redirect(url_for('login'))
         
-    if user.group_role != 'Leader':
-        flash('Unauthorized: Only Leaders can promote members.', 'error')
-        return redirect(request.referrer or url_for('dashboard'))
+    active_group = get_active_group(user)
+    
+    if active_group and active_group.leader_id == user.id:
+        target_user = db.session.get(User, member_id)
+        if target_user and target_user in active_group.users:
+            if target_user not in active_group.co_leaders:
+                active_group.co_leaders.append(target_user)
+                db.session.commit()
+                flash(f'{target_user.username} has been promoted to Co-Leader.', 'success')
+            else:
+                flash(f'{target_user.username} is already a Co-Leader.', 'info')
+        else:
+            flash('User not found or not in group.', 'error')
+    else:
+        flash('Unauthorized: Only the Group Leader can promote members.', 'error')
         
-    target_user = db.session.get(User, member_id)
-    if not target_user:
-        flash('User not found.', 'error')
-        return redirect(request.referrer or url_for('dashboard'))
+    return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/demote/<int:member_id>', methods=['POST'])
+def demote(member_id):
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
         
     active_group = get_active_group(user)
-    if active_group and target_user in active_group.users:
-        if target_user.group_role == 'Member':
-            target_user.group_role = 'Co-Leader'
+    if active_group and active_group.leader_id == user.id:
+        target_user = db.session.get(User, member_id)
+        if target_user and target_user in active_group.co_leaders:
+            active_group.co_leaders.remove(target_user)
             db.session.commit()
-            flash(f'{target_user.username} has been promoted to Co-Leader.', 'success')
+            flash(f'{target_user.username} has been demoted to Member.', 'success')
         else:
-            flash(f'{target_user.username} is already {target_user.group_role}.', 'info')
+            flash('User is not a Co-Leader or not in group.', 'error')
     else:
-        flash('User is not in your current group.', 'error')
+        flash('Unauthorized: Only the Group Leader can demote members.', 'error')
         
     return redirect(request.referrer or url_for('dashboard'))
 
@@ -556,11 +590,13 @@ def create_task():
     if not user:
         return redirect(url_for('login'))
 
-    if user.group_role not in ['Leader', 'Co-Leader']:
+    active_group = get_active_group(user)
+    current_role = get_user_role(user, active_group) if active_group else 'Member'
+
+    if current_role not in ['Leader', 'Co-Leader']:
         flash('Unauthorized: Only Leaders and Co-Leaders can create tasks.', 'error')
         return redirect(request.referrer or url_for('dashboard'))
 
-    active_group = get_active_group(user)
     if not active_group:
         flash('You must select or join a project to create tasks.', 'error')
         return redirect(request.referrer or url_for('groups'))
@@ -577,7 +613,7 @@ def create_task():
             assignee = db.session.get(User, assignee_id)
             if not assignee or assignee not in active_group.users:
                 flash('Assignee must be a member of the current group.', 'error')
-                return redirect(request.referrer or url_for('tasks'))
+                return redirect(request.referrer or url_for('tasks_route'))
         except ValueError:
             pass
 
@@ -590,7 +626,7 @@ def create_task():
 
     if not title:
         flash('Title is required.', 'error')
-        return redirect(request.referrer or url_for('tasks'))
+        return redirect(request.referrer or url_for('tasks_route'))
 
     deadline = None
     if deadline_str:
@@ -617,7 +653,7 @@ def create_task():
     db.session.commit()
 
     flash('Item created successfully.', 'success')
-    return redirect(request.referrer or url_for('tasks'))
+    return redirect(request.referrer or url_for('tasks_route'))
 
 
 @app.route('/task/feedback/<int:task_id>', methods=['POST'])
@@ -674,12 +710,12 @@ def delete_task(task_id):
     task = db.session.get(Task, task_id)
     if not task or task.group not in user.groups:
         flash('Task not found or you do not have permission to delete it.', 'error')
-        return redirect(request.referrer or url_for('tasks'))
+        return redirect(request.referrer or url_for('tasks_route'))
 
     db.session.delete(task)
     db.session.commit()
     flash(f'Deleted successfully.', 'success')
-    return redirect(request.referrer or url_for('tasks'))
+    return redirect(request.referrer or url_for('tasks_route'))
 
 
 @app.route('/task/mark_read/<int:task_id>', methods=['POST'])
@@ -693,7 +729,7 @@ def mark_read(task_id):
         task.feedback_unread = False
         db.session.commit()
 
-    return redirect(request.referrer or url_for('tasks'))
+    return redirect(request.referrer or url_for('tasks_route'))
 
 
 @app.route('/task/sync/<int:task_id>', methods=['POST'])
@@ -705,7 +741,7 @@ def sync_task(task_id):
     task = db.session.get(Task, task_id)
     if not task or task.group not in user.groups:
         flash('Task not found or you do not have permission to sync it.', 'error')
-        return redirect(url_for('tasks'))
+        return redirect(url_for('tasks_route'))
 
     # Handle completion toggle for non-coding tasks
     if task.is_non_coding:
@@ -717,8 +753,12 @@ def sync_task(task_id):
 
     # Handle feedback update
     new_feedback = request.form.get('feedback')
-    if new_feedback and new_feedback.strip() != (task.feedback or "").strip():
-        task.feedback = new_feedback.strip()
+    if new_feedback and new_feedback.strip():
+        timestamp = f"[{user.username}]: {new_feedback.strip()}"
+        if task.feedback:
+            task.feedback = task.feedback + "\n\n" + timestamp
+        else:
+            task.feedback = timestamp
         task.feedback_unread = True  # Mark as unread so leader gets a red dot
 
     assignee = task.assignee
@@ -727,13 +767,13 @@ def sync_task(task_id):
     if task.is_non_coding:
         db.session.commit()
         flash(f'Task "{task.title}" updated successfully.', 'success')
-        return redirect(url_for('tasks'))
+        return redirect(url_for('tasks_route'))
 
     # It's a coding project, enforce GitHub sync
     if group and group.repo_url:
         if not assignee or not assignee.github_username:
             flash(f'Cannot sync task: Assignee missing GitHub username.', 'error')
-            return redirect(url_for('tasks'))
+            return redirect(url_for('tasks_route'))
 
         net_loc, error = AccountabilityEngine.fetch_github_loc(group.repo_url, assignee.github_username, task.title)
 
@@ -742,7 +782,7 @@ def sync_task(task_id):
                 flash(f'GitHub Sync Warning: {error}', 'warning')
             else:
                 flash(f'GitHub Sync Error: {error}', 'error')
-                return redirect(url_for('tasks'))
+                return redirect(url_for('tasks_route'))
 
         task.actual_loc = net_loc
         task.status_color = AccountabilityEngine.calculate_task_health(
@@ -761,8 +801,25 @@ def sync_task(task_id):
         db.session.commit()
         flash(f'Task updated.', 'success')
 
-    return redirect(url_for('tasks'))
+    return redirect(url_for('tasks_route'))
 
+@app.route('/group/leave/<int:group_id>', methods=['POST'])
+def leave_group(group_id):
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+
+    group = db.session.get(Group, group_id)
+    if group and group in user.groups:
+        user.groups.remove(group)
+        if user.current_group_id == group.id:
+            user.current_group_id = user.groups[0].id if user.groups else None
+        db.session.commit()
+        flash(f'You have left the project "{group.name}".', 'success')
+    else:
+        flash('Invalid group or you are not a member.', 'error')
+        
+    return redirect(url_for('groups'))
 
 # --- MAIN EXECUTION ---
 if __name__ == '__main__':

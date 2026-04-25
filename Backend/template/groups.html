@@ -24,6 +24,7 @@
   .btn, .btn-secondary { padding: .7rem 1.4rem; color: #fff; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; width: 100%; transition: transform 0.2s; }
   .btn { background: var(--teal); } .btn:hover { background: var(--teal-dark); transform: translateY(-2px); }
   .btn-secondary { background: var(--blue); } .btn-secondary:hover { background: #0f5e8f; transform: translateY(-2px); }
+  .btn-danger { background: var(--red-light); color: var(--red); } .btn-danger:hover { background: var(--red); color: #fff; }
 
   /* Hero card for active group */
   .active-hero-card { border: 2px solid var(--teal); border-radius: var(--radius); padding: 2rem; background: var(--teal-light); }
@@ -75,7 +76,12 @@
       {% if current_user.current_group_id == group.id %}
       <div class="active-hero-card">
         <span class="active-badge">Currently Active Workspace</span>
-        <h3>{{ group.name }}</h3>
+        <h3 style="display: flex; justify-content: space-between; align-items: center;">
+            {{ group.name }}
+            <form action="{{ url_for('leave_group', group_id=group.id) }}" method="POST" style="margin: 0;">
+              <button type="submit" class="btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; width: auto;" onclick="return confirm('Leave this group?');">Leave Group</button>
+            </form>
+        </h3>
         <p style="color: var(--teal-dark);">Invite Code: <strong style="background: white; padding: 0.2rem 0.6rem; border-radius: 4px;">{{ group.invite_code }}</strong></p>
         <p style="color: var(--teal-dark); margin-bottom: 1.5rem;">Repo: <strong>{{ group.repo_url or 'None' }}</strong></p>
 
@@ -84,8 +90,26 @@
           <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.8rem;">
             {% for member in group.users %}
               <li style="display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
-                <strong>{{ member.username }}</strong>
-                <span style="font-size: 0.75rem; background: var(--paper); padding: 0.2rem 0.5rem; border-radius: 4px; color: var(--muted);">{{ member.group_role }}</span>
+                <div>
+                    <strong>{{ member.username }}</strong>
+                    {% if group.leader_id == member.id %}
+                        <span style="font-size: 0.75rem; background: var(--teal); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; margin-left: 0.5rem;">Leader</span>
+                    {% elif member.group_role == 'Co-Leader' %}
+                        <span style="font-size: 0.75rem; background: var(--blue); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; margin-left: 0.5rem;">Co-Leader</span>
+                    {% else %}
+                        <span style="font-size: 0.75rem; background: var(--paper); padding: 0.2rem 0.5rem; border-radius: 4px; color: var(--muted); margin-left: 0.5rem;">Member</span>
+                    {% endif %}
+                </div>
+
+                {% if group.leader_id == current_user.id and member.id != current_user.id %}
+                    {% if member.group_role == 'Member' %}
+                        <form action="{{ url_for('promote', member_id=member.id) }}" method="POST" style="margin: 0;">
+                            <button type="submit" style="background: none; border: none; color: var(--teal); cursor: pointer; font-size: 0.8rem; font-weight: 600;">Promote</button>
+                        </form>
+                    {% elif member.group_role == 'Co-Leader' %}
+                        <span style="font-size: 0.8rem; color: var(--muted);">Promoted</span>
+                    {% endif %}
+                {% endif %}
               </li>
             {% endfor %}
           </ul>

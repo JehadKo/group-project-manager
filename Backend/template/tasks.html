@@ -31,7 +31,7 @@
   .field input, .field select, .field textarea { padding: .6rem .8rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: .85rem; background: var(--paper); outline: none; width: 100%; }
   .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--teal); background: var(--white); }
   .field textarea { min-height: 80px; resize: vertical; }
-  .btn-save { padding: 0.6rem 1.2rem; background: var(--teal); color: #fff; border: none; border-radius: 8px; font-weight: 600; font-size: .85rem; cursor: pointer; transition: all .2s; }
+  .btn-save { padding: 0.6rem 1.2rem; background: var(--teal); color: #fff; border: none; border-radius: 8px; font-weight: 600; font-size: .85rem; cursor: pointer; transition: all .2s; width: 100%;}
   .btn-save:hover { background: var(--teal-dark); transform: translateY(-2px); }
 
   /* Task Panels */
@@ -60,13 +60,18 @@
   .task-card.status-ongoing { border-left-color: var(--blue); }
   .task-card.status-completed { border-left-color: var(--teal); opacity: 0.7; background: var(--paper); }
 
-  .task-card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.05rem; margin-bottom: .2rem; }
+  .task-card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.05rem; margin-bottom: .2rem; display: flex; justify-content: space-between; align-items: flex-start;}
   .task-desc { font-size: .85rem; color: var(--muted); line-height: 1.4; margin-bottom: 0.8rem; }
 
   .manual-entry { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; background: var(--paper); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border); flex-direction: column; align-items: stretch;}
   .btn-ghost-sm { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: .35rem .7rem; border-radius: 8px; font-size: .76rem; cursor: pointer; }
   .btn-ghost-sm:hover { color: var(--teal); border-color: var(--teal); background: var(--teal-light); }
   .btn-ghost-sm.danger:hover { color: #fff; border-color: var(--red); background: var(--red); }
+
+  .red-dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--red); margin-left:0.5rem; box-shadow: 0 0 0 3px var(--red-light); animation:pulse 2s infinite ease-in-out;}
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--red-light); } 70% { box-shadow: 0 0 0 6px rgba(253,232,232,0); } 100% { box-shadow: 0 0 0 0 rgba(253,232,232,0); } }
+
+  .feedback-box { font-size: 0.8rem; background: var(--surface); padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 0.5rem; max-height: 100px; overflow-y: auto; white-space: pre-wrap;}
 
   @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr 1fr; height: auto; } .form-card { grid-column: span 2; max-height: none; } }
   @media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } .form-card { grid-column: span 1; } }
@@ -87,6 +92,11 @@
       <h2>Create a task</h2>
       <p>Add to your active project.</p>
     </div>
+    {% if not current_user.groups %}
+        <div style="padding: 1rem; text-align: center; color: var(--muted); font-size: 0.85rem;">You must join a group to create tasks.</div>
+    {% elif current_role not in ['Leader', 'Co-Leader'] %}
+        <div style="padding: 1rem; text-align: center; color: var(--muted); font-size: 0.85rem;">Only Leaders and Co-Leaders can create tasks.</div>
+    {% else %}
     <form id="task-form" action="{{ url_for('create_task') }}" method="POST">
       <div class="form-body">
         <div class="field">
@@ -125,6 +135,7 @@
         <button class="btn-save" type="submit">Save Task</button>
       </div>
     </form>
+    {% endif %}
   </div>
 
   <div class="task-panel">
@@ -135,7 +146,14 @@
       {% for task in tasks %}
         {% if task.status_color != 'bg-success' %}
           <div class="task-card status-{% if task.status_color == 'bg-warning' %}ongoing{% else %}pending{% endif %}">
-            <div class="task-card-title">{{ task.title }}</div>
+            <div class="task-card-title">
+                {{ task.title }}
+                {% if task.feedback_unread %}
+                <form action="{{ url_for('mark_read', task_id=task.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" style="background:none;border:none;cursor:pointer;" title="Mark as read"><span class="red-dot"></span></button>
+                </form>
+                {% endif %}
+            </div>
             <div class="task-desc">{{ task.description or "No description provided." }}</div>
 
             <form action="{{ url_for('sync_task', task_id=task.id) }}" method="POST">
@@ -149,9 +167,15 @@
                       <div style="font-size:0.8rem; font-weight:bold; color:var(--teal);">{{ task.actual_loc }} / {{ task.target_loc }} LoC via GitHub</div>
                     {% endif %}
                 {% endif %}
-                <textarea name="feedback" placeholder="Notes..." style="width:100%; min-height:40px; padding:0.4rem;">{{ task.feedback or '' }}</textarea>
+
+                {% if task.feedback %}
+                    <div class="feedback-box">{{ task.feedback }}</div>
+                {% endif %}
+
+                <textarea name="feedback" placeholder="Add a note/reply..." style="width:100%; min-height:40px; padding:0.4rem;"></textarea>
+
                 <div style="display:flex; justify-content:space-between; width:100%; margin-top:0.5rem;">
-                   <button type="submit" class="btn-save" style="padding:0.3rem 0.8rem; font-size:0.8rem;">Sync / Update</button>
+                   <button type="submit" class="btn-save" style="padding:0.3rem 0.8rem; font-size:0.8rem; width: auto;">Update</button>
                    <button type="submit" form="del-{{ task.id }}" class="btn-ghost-sm danger">Delete</button>
                 </div>
               </div>
@@ -173,11 +197,30 @@
       {% for task in tasks %}
         {% if task.status_color == 'bg-success' %}
           <div class="task-card status-completed">
-            <div class="task-card-title" style="text-decoration:line-through;">{{ task.title }}</div>
+            <div class="task-card-title" style="text-decoration:line-through;">
+                {{ task.title }}
+                {% if task.feedback_unread %}
+                <form action="{{ url_for('mark_read', task_id=task.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" style="background:none;border:none;cursor:pointer;" title="Mark as read"><span class="red-dot"></span></button>
+                </form>
+                {% endif %}
+            </div>
             <div class="task-desc">Completed by {{ task.assignee.username if task.assignee else 'Unknown' }}</div>
-            <form action="{{ url_for('delete_task', task_id=task.id) }}" method="POST" style="text-align: right;">
-               <button type="submit" class="btn-ghost-sm danger" onclick="return confirm('Delete task?');">Delete</button>
+
+            {% if task.feedback %}
+                <div class="feedback-box">{{ task.feedback }}</div>
+            {% endif %}
+
+            <form action="{{ url_for('sync_task', task_id=task.id) }}" method="POST">
+                <div class="manual-entry">
+                    <textarea name="feedback" placeholder="Add a note/reply..." style="width:100%; min-height:40px; padding:0.4rem;"></textarea>
+                    <div style="display:flex; justify-content:space-between; width:100%; margin-top:0.5rem;">
+                       <button type="submit" class="btn-save" style="padding:0.3rem 0.8rem; font-size:0.8rem; width: auto;">Reply</button>
+                       <button type="submit" form="del-{{ task.id }}" class="btn-ghost-sm danger">Delete</button>
+                    </div>
+                </div>
             </form>
+            <form id="del-{{ task.id }}" action="{{ url_for('delete_task', task_id=task.id) }}" method="POST"></form>
           </div>
         {% endif %}
       {% endfor %}
